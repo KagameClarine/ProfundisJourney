@@ -1,0 +1,31 @@
+[gd_scene format=3 uid="uid://caugggegrpt4p"]
+
+[ext_resource type="Script" uid="uid://bb3w6w2awvq4v" path="res://main.gd" id="1_0xm2m"]
+[ext_resource type="Script" uid="uid://biqbgbtssmhwh" path="res://player.gd" id="1_ig7tw"]
+
+[sub_resource type="TileSet" id="TileSet_0xm2m"]
+physics_layer_0/collision_layer = 1
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wlxyo"]
+size = Vector2(32, 64)
+
+[node name="Main" type="Node2D" unique_id=993356720]
+script = ExtResource("1_0xm2m")
+
+[node name="World" type="TileMapLayer" parent="." unique_id=499980774]
+tile_set = SubResource("TileSet_0xm2m")
+
+[node name="Player" type="CharacterBody2D" parent="." unique_id=989760757]
+position = Vector2(2416, 0)
+script = ExtResource("1_ig7tw")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Player" unique_id=1051259752]
+position = Vector2(0, 7)
+shape = SubResource("RectangleShape2D_wlxyo")
+
+[node name="Camera2D" type="Camera2D" parent="Player" unique_id=1988288565]
+zoom = Vector2(1.5, 1.5)
+
+[node name="Polygon2D" type="Polygon2D" parent="Player" unique_id=462546416]
+color = Color(0, 1, 1, 1)
+polygon = PackedVector2Array(-16, -32, 16, -32, 16, 32, -16, 32)
