@@ -1854,9 +1854,11 @@ func _input(event: InputEvent) -> void:
 	   and not is_inventory_open and not is_char_open \
 	   and not is_transitioning and not is_player_dead:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			Sfx.play("tick") # <--- TAMBAHKAN BARIS INI
 			_change_hotbar_slot_domain(-1)
 			return
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			Sfx.play("tick") # <--- TAMBAHKAN BARIS INI
 			_change_hotbar_slot_domain(1)
 			return
 	

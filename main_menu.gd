@@ -72,6 +72,7 @@ func _ready():
 		get_tree().reload_current_scene()
 	)
 	delete_confirm_panel.add_child(b_yes)
+	Sfx.attach(b_yes)
 	
 	var b_no = Button.new()
 	b_no.text = "NO"
@@ -83,6 +84,7 @@ func _ready():
 		delete_confirm_panel.visible = false
 	)
 	delete_confirm_panel.add_child(b_no)
+	Sfx.attach(b_no)
 	
 	# Title
 	var title = Label.new()
@@ -123,6 +125,7 @@ func _create_button(text: String, pos: Vector2, callback: Callable, disabled: bo
 	btn.disabled = disabled
 	if not disabled:
 		btn.pressed.connect(callback)
+		Sfx.attach(btn)
 	add_child(btn)
 	return btn
 
@@ -169,6 +172,7 @@ func _show_slot_selection():
 		btn.add_theme_font_size_override("font_size", 20)
 		btn.pressed.connect(_on_slot_pressed.bind(i))
 		hbox.add_child(btn)
+		Sfx.attach(btn)
 		
 		# Tombol Delete
 		var del_btn = Button.new()
@@ -178,6 +182,7 @@ func _show_slot_selection():
 		del_btn.disabled = info.is_empty() # Kalau kosong, gak bisa dihapus
 		del_btn.pressed.connect(_on_delete_save_pressed.bind(i))
 		hbox.add_child(del_btn)
+		Sfx.attach(del_btn)
 	
 	var back_btn = Button.new()
 	back_btn.text = "< Back"
@@ -185,6 +190,7 @@ func _show_slot_selection():
 	back_btn.size = Vector2(200, 50)
 	back_btn.pressed.connect(func(): get_tree().reload_current_scene())
 	add_child(back_btn)
+	Sfx.attach(back_btn)
 
 func _on_delete_save_pressed(slot_num: int):
 	delete_target_slot = slot_num

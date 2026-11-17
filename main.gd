@@ -853,9 +853,11 @@ func _input(event):
 	   and not is_spectating and not is_inventory_open \
 	   and not is_char_open and not is_crafting_open:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			Sfx.play("tick")
 			_change_hotbar_slot(-1)
 			return
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			Sfx.play("tick")
 			_change_hotbar_slot(1)
 			return
 	
@@ -4110,13 +4112,14 @@ func bikin_ui_crafting():
 	title.add_theme_font_size_override("font_size", 24)
 	ui_crafting_panel.add_child(title)
 	
-	# 1. Torch (selalu)
+	# 1. Torch
 	btn_torch = Button.new()
 	btn_torch.text = "Torch (1 Coal + 1 Stick) -> 8x"
 	btn_torch.position = Vector2(20, 60)
 	btn_torch.size = Vector2(260, 40)
 	btn_torch.pressed.connect(func(): craft_item("torch"))
 	ui_crafting_panel.add_child(btn_torch)
+	Sfx.attach(btn_torch, "hover", "") # <--- Kunci: Hover aja, klik jangan
 	
 	# 2. Arrow
 	btn_arrow = Button.new()
@@ -4125,6 +4128,7 @@ func bikin_ui_crafting():
 	btn_arrow.size = Vector2(260, 40)
 	btn_arrow.pressed.connect(func(): craft_item("arrow"))
 	ui_crafting_panel.add_child(btn_arrow)
+	Sfx.attach(btn_arrow, "hover", "") # <--- Kunci: Hover aja, klik jangan
 	
 	# 3. Minigun Ammo
 	btn_minigun_ammo = Button.new()
@@ -4133,6 +4137,7 @@ func bikin_ui_crafting():
 	btn_minigun_ammo.size = Vector2(260, 40)
 	btn_minigun_ammo.pressed.connect(func(): craft_item("minigun_ammo"))
 	ui_crafting_panel.add_child(btn_minigun_ammo)
+	Sfx.attach(btn_minigun_ammo, "hover", "") # <--- Kunci: Hover aja, klik jangan
 
 func update_crafting_ui():
 	if not is_instance_valid(btn_arrow) or not is_instance_valid(btn_minigun_ammo): return
@@ -4183,11 +4188,14 @@ func craft_item(recipe):
 					if hotbar_items[i] == null: hotbar_items[i] = "Torch"; break
 			update_inventory_ui()
 			update_hotbar_ui()
+			Sfx.play("click") # <--- SUARA SUKSES CRAFT TORCH
 			if is_tutorial_active:
 				tutorial_stats["torches"] += 1
 				check_objective_progress()
 		else:
+			Sfx.play("error") # <--- SUARA GAGAL CRAFT TORCH
 			show_floating_text("Bahan kurang!", $Player.global_position)
+			
 	elif recipe == "minigun_ammo":
 		if inventory.get("Copper", 0) >= 2 and inventory.get("Flint", 0) >= 2:
 			inventory["Copper"] -= 2
@@ -4203,8 +4211,11 @@ func craft_item(recipe):
 						break
 			update_inventory_ui()
 			update_hotbar_ui()
+			Sfx.play("click") # <--- SUARA SUKSES CRAFT AMMO
 		else:
+			Sfx.play("error") # <--- SUARA GAGAL CRAFT AMMO
 			show_floating_text("Bahan kurang!", $Player.global_position)
+			
 	elif recipe == "arrow":
 		if inventory.get("Flint", 0) >= 1 and inventory.get("Stick", 0) >= 1:
 			inventory["Flint"] -= 1; inventory["Stick"] -= 1
@@ -4217,10 +4228,12 @@ func craft_item(recipe):
 					if hotbar_items[i] == null: hotbar_items[i] = "Arrow"; break
 			update_inventory_ui()
 			update_hotbar_ui()
+			Sfx.play("click") # <--- SUARA SUKSES CRAFT ARROW
 			if is_tutorial_active:
 				tutorial_stats["arrows"] += 1
 				check_objective_progress()
 		else:
+			Sfx.play("error") # <--- SUARA GAGAL CRAFT ARROW
 			show_floating_text("Bahan kurang!", $Player.global_position)
 
 func bikin_ui_hp_dan_nyawa():
@@ -4620,6 +4633,7 @@ func show_buff_options():
 		btn.add_theme_font_size_override("font_size", 16)
 		btn.pressed.connect(func(): apply_buff(buff["id"]))
 		ui_buff_panel.add_child(btn)
+		Sfx.attach(btn)
 
 func apply_buff(id: String):
 	if id == "eff": buff_efficiency += 1.0
@@ -6400,6 +6414,7 @@ func bikin_ui_pause_main():
 		$Player.set_physics_process(true)
 	)
 	pause_panel_main.add_child(b_cont)
+	Sfx.attach(b_cont)
 
 	# ✅ TAMBAHAN: Tombol Settings
 	var b_set = Button.new()
@@ -6408,6 +6423,7 @@ func bikin_ui_pause_main():
 	b_set.add_theme_font_size_override("font_size", 24)
 	b_set.disabled = true
 	pause_panel_main.add_child(b_set)
+	Sfx.attach(b_set)
 
 	# Tombol Abort (SHIFT dari 230 → 290 biar tidak overlap)
 	var b_abort = Button.new()
@@ -6419,6 +6435,7 @@ func bikin_ui_pause_main():
 		abort_confirm_panel.visible = true
 	)
 	pause_panel_main.add_child(b_abort)
+	Sfx.attach(b_abort)
 	
 	# --- PANEL KONFIRMASI ABORT ---
 	abort_blocker = ColorRect.new()
@@ -6465,6 +6482,7 @@ func bikin_ui_pause_main():
 		get_tree().change_scene_to_file("res://home.tscn")
 	)
 	abort_confirm_panel.add_child(b_yes)
+	Sfx.attach(b_yes)
 	
 	var b_no = Button.new()
 	b_no.text = "NO"
@@ -6475,6 +6493,7 @@ func bikin_ui_pause_main():
 		abort_confirm_panel.visible = false
 	)
 	abort_confirm_panel.add_child(b_no)
+	Sfx.attach(b_no)
 
 func _close_pause_main():
 	is_pause_main_open = false

@@ -512,6 +512,9 @@ func _ready():
 				Global.post_t3_cutscene_step = 0
 				Global.save_game()
 				update_objective_ui()
+				
+	for btn in find_children("*", "Button", true, false):
+		Sfx.attach(btn)
 		
 func update_objective_ui():
 	if not is_instance_valid(ui_objective_label): return
@@ -4493,6 +4496,10 @@ func bikin_ui_prep(canvas: CanvasLayer):
 	btn_ready_main.size = Vector2(200, 60)
 	btn_ready_main.add_theme_font_size_override("font_size", 24)
 	prep_panel.add_child(btn_ready_main)
+	
+	# TAMBAHKAN BARIS INI: 
+	# Hover pakai suara biasa, tapi klik pakai suara "ready"
+	Sfx.attach(btn_ready_main, "hover", "ready")
 	btn_ready_main.pressed.connect(func(): check_ready_to_go())
 	
 	# --- 4. TOMBOL X CLOSE (Pojok Kanan Atas) ---

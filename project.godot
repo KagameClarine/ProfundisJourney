@@ -19,6 +19,7 @@ config/icon="res://icon.svg"
 
 Global="*uid://c2bbtea2ki3vv"
 MusicManager="*uid://c40ccnqavangt"
+Sfx="*uid://dotmee0hg6wsq"
 
 [display]
 
