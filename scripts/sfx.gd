@@ -16,7 +16,11 @@ func _ready():
 		_sounds["error"] = load("res://audio/sfx_error.ogg")
 	if ResourceLoader.exists("res://audio/sfx_ready.ogg"):
 		_sounds["ready"] = load("res://audio/sfx_ready.ogg")
-
+	if ResourceLoader.exists("res://audio/sfx_coin.ogg"):
+		_sounds["coin"] = load("res://audio/sfx_coin.ogg")
+	if ResourceLoader.exists("res://audio/sfx_drop.ogg"):
+		_sounds["drop"] = load("res://audio/sfx_drop.ogg")
+	
 	for i in 8:
 		var p := AudioStreamPlayer.new()
 		p.bus = "Master"

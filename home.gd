@@ -512,9 +512,6 @@ func _ready():
 				Global.post_t3_cutscene_step = 0
 				Global.save_game()
 				update_objective_ui()
-				
-	for btn in find_children("*", "Button", true, false):
-		Sfx.attach(btn)
 		
 func update_objective_ui():
 	if not is_instance_valid(ui_objective_label): return
@@ -1700,6 +1697,7 @@ func bikin_ui_selling(canvas: CanvasLayer):
 
 	var btn_sell = Button.new()
 	btn_sell.text = "SELL"
+	btn_sell.add_to_group("no_click_sfx")
 	btn_sell.position = Vector2(190, 280)
 	btn_sell.size = Vector2(120, 40)
 	btn_sell.pressed.connect(func(): execute_sell())
@@ -1777,6 +1775,7 @@ func execute_sell():
 	if total_gold > 0:
 		Global.gold_coins += total_gold
 		ui_gold_label.text = "Gold: " + str(Global.gold_coins)
+		Sfx.play("coin")
 
 		var random_index = randi() % thanks_texts.size()
 		sell_dialog_label.text = thanks_texts[random_index]
@@ -2532,6 +2531,7 @@ func craft_weapon(weapon_name: String):
 				Global.saved_inventory.erase(part)
 
 		Global.saved_inventory[weapon_name] = Global.saved_inventory.get(weapon_name, 0) + 1
+		Sfx.play("coin")
 
 		show_floating_text(weapon_name + " Crafted!", player.global_position, Color.GOLD)
 		update_inventory_ui()
@@ -3361,6 +3361,7 @@ func _on_smithing_salvage():
 	
 	var lbl = salvage_confirm.get_node("ConfirmLabel")
 	lbl.text = "Are you sure want to salvage this for " + str(g_return) + " Gold and " + str(s_return) + " Scrap?\n\nThis equipment will gone forever!"
+	Sfx.play("drop")
 	salvage_confirm.visible = true
 
 func _execute_salvage():
@@ -3374,6 +3375,7 @@ func _execute_salvage():
 	# Kasih hadiah salvage
 	Global.gold_coins += g_return
 	Global.saved_inventory["Scrap"] = Global.saved_inventory.get("Scrap", 0) + s_return
+	Sfx.play("coin")
 	
 	# HAPUS DARI SEMUA TEMPAT (Tas, Equip, Hotbar, Storage)
 	Global.saved_inventory.erase(smithing_selected_uuid)
@@ -4687,6 +4689,7 @@ func bikin_ui_pause_home():
 		$Player.set_physics_process(true)
 	)
 	pause_panel_home.add_child(b_cont)
+	Sfx.attach(b_cont) # <--- TAMBAHKAN INI
 	
 	var b_set = Button.new()
 	b_set.text = "SETTINGS (Coming Soon)"
@@ -4695,6 +4698,7 @@ func bikin_ui_pause_home():
 	b_set.add_theme_font_size_override("font_size", 24)
 	b_set.disabled = true
 	pause_panel_home.add_child(b_set)
+	Sfx.attach(b_set) # <--- TAMBAHKAN INI (Aman, walaupun disabled)
 	
 	var b_quit = Button.new()
 	b_quit.text = "QUIT TO MAIN MENU"
@@ -4707,6 +4711,7 @@ func bikin_ui_pause_home():
 		get_tree().change_scene_to_file("res://main_menu.tscn")
 	)
 	pause_panel_home.add_child(b_quit)
+	Sfx.attach(b_quit) # <--- TAMBAHKAN INI
 	
 	# Tambahan teks kecil di bawah
 	var hint = Label.new()
