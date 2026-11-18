@@ -1145,13 +1145,13 @@ func _input(event):
 				close_all_menus()
 				return
 				
-			# --- TAMBAHKAN DI SINI ---
+			# --- INTERAKSI MUSIC PLAYER ---
 			if can_use_music_player:
+				Sfx.play("interact")
 				close_all_menus()
 				open_music_player_ui()
 				player.set_physics_process(false)
 				return
-			# -------------------------
 				
 			# 2. PRIORITAS UTAMA: MIKE (Guild Master)
 			if is_instance_valid(guild_master_node) and player.global_position.distance_to(guild_master_node.global_position) < 150.0:
@@ -1161,6 +1161,7 @@ func _input(event):
 					Global.save_game()
 					update_objective_ui()
 					
+					Sfx.play("interact")
 					close_all_menus()
 					player.set_physics_process(false)
 					
@@ -1179,6 +1180,7 @@ func _input(event):
 					update_guild_ui()
 				elif Global.tutorial_step >= 13:
 					# Kalau udah tamat, klik E di Mike langsung buka map tanpa dialog lagi
+					Sfx.play("interact")
 					close_all_menus()
 					is_guild_open = true
 					guild_panel.visible = true
@@ -1188,6 +1190,7 @@ func _input(event):
 
 			# 4. SMITHING STATION (GAIL)
 			if is_instance_valid(smithing_station_node) and player.global_position.distance_to(smithing_station_node.global_position) < 150.0:
+				Sfx.play("interact")
 				close_all_menus()
 				player.set_physics_process(false)
 				
@@ -1204,6 +1207,7 @@ func _input(event):
 			# 5. INTERAKSI LAINNYA
 			if is_instance_valid(old_miner_node) and Global.tutorial_step >= 1:
 				if player.global_position.distance_to(old_miner_node.global_position) < 150.0:
+					Sfx.play("interact")
 					close_all_menus()
 					open_selling_ui()
 					player.set_physics_process(false)
@@ -1211,6 +1215,7 @@ func _input(event):
 
 			if is_instance_valid(storage_ore_node) and Global.tutorial_step >= 2:
 				if player.global_position.distance_to(storage_ore_node.global_position) < 150.0:
+					Sfx.play("interact")
 					close_all_menus()
 					open_storage_ui("ore")
 					player.set_physics_process(false)
@@ -1218,18 +1223,21 @@ func _input(event):
 
 			if is_instance_valid(storage_weapon_node) and Global.tutorial_step >= 2:
 				if player.global_position.distance_to(storage_weapon_node.global_position) < 150.0:
+					Sfx.play("interact")
 					close_all_menus()
 					open_storage_ui("weapon")
 					player.set_physics_process(false)
 					return
 			
 			if is_instance_valid(forge_node) and player.global_position.distance_to(forge_node.global_position) < 150.0:
+				Sfx.play("interact")
 				close_all_menus()
 				open_forge_ui()
 				player.set_physics_process(false)
 				return
 				
 			if is_instance_valid(smelt_node) and player.global_position.distance_to(smelt_node.global_position) < 150.0:
+				Sfx.play("interact")
 				close_all_menus()
 				open_smelt_ui()
 				player.set_physics_process(false)
@@ -1793,7 +1801,14 @@ func execute_sell():
 			show_home_dialog("Old Miner: \"Great! Now go to the Smelter and turn that Iron into Bars.\"")
 		else:
 			update_objective_ui()
+			
+	# ▼▼▼ TAMBAHKAN BLOK ELSE INI ▼▼▼
+	else:
+		Sfx.play("error")
+		sell_dialog_label.text = "Old Miner: \"You don't have anything to sell, rookie!\""
+	# ▲▲▲ CUKUP SAMPAI SINI SAJA ▲▲▲
 
+	# Bagian ini biarkan apa adanya (tidak akan rusak)
 	sell_data.clear()
 	update_selling_ui()
 	update_inventory_ui()
@@ -3319,12 +3334,14 @@ func _on_smithing_upgrade():
 		gold_c = 10; scrap_c = 20
 		
 	if Global.gold_coins < gold_c or get_total_item_count("Scrap") < scrap_c:
+		Sfx.play("error")
 		show_floating_text("Not enough Gold or Scrap!", player.global_position, Color.RED)
 		return
 		
 	Global.gold_coins -= gold_c
 	remove_item_from_all("Scrap", scrap_c)
 	Global.set_item_level(base_n, target_lv, smithing_selected_uuid)
+	Sfx.play("upgrade")
 	Global.weapon_investment_gold[smithing_selected_uuid] = Global.weapon_investment_gold.get(smithing_selected_uuid, get_base_cost(base_n)) + gold_c
 	Global.weapon_investment_scrap[smithing_selected_uuid] = Global.weapon_investment_scrap.get(smithing_selected_uuid, 0) + scrap_c
 

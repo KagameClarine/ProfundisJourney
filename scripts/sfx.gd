@@ -20,6 +20,12 @@ func _ready():
 		_sounds["coin"] = load("res://audio/sfx_coin.ogg")
 	if ResourceLoader.exists("res://audio/sfx_drop.ogg"):
 		_sounds["drop"] = load("res://audio/sfx_drop.ogg")
+	if ResourceLoader.exists("res://audio/sfx_upgrade.ogg"):
+		_sounds["upgrade"] = load("res://audio/sfx_upgrade.ogg")
+	if ResourceLoader.exists("res://audio/sfx_interact.ogg"):
+		_sounds["interact"] = load("res://audio/sfx_interact.ogg")
+	if ResourceLoader.exists("res://audio/sfx_door.ogg"):
+		_sounds["door"] = load("res://audio/sfx_door.ogg")
 	
 	for i in 8:
 		var p := AudioStreamPlayer.new()

@@ -516,9 +516,10 @@ func start_boss_fight():
 		create_static_block(Vector2(1660, -160), Vector2(40, 960), Color(0.1, 0.15, 0.1), true)
 		create_static_block(Vector2(1180, -640), Vector2(960, 40), Color(0.1, 0.15, 0.1), true)
 		create_static_block(Vector2(1180, 20), Vector2(960, 40), Color(0.15, 0.25, 0.15), true)
-		
 		var door_lock = create_static_block(Vector2(700, -320), Vector2(40, 640), Color(0.6, 0.1, 0.1), true)
 		door_lock.name = "BossDoorLock"
+		
+		Sfx.play("door")
 		
 		# --- PLATFORM HUNTER ---
 		if boss_type == "Powerful Hunter":
