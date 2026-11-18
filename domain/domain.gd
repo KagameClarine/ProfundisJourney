@@ -257,6 +257,13 @@ func _process(delta):
 							var _cached_type = _e.get_meta("type")
 							var _hp = _e.get_meta("hp") - _exp_dmg
 							_e.set_meta("hp", _hp)
+							# --- TAMBAHKAN INI ---
+							var _ename = _cached_type.to_lower().replace("_boss", "")
+							Sfx.play(_ename + "_hurt")
+							# ---------------------
+
+							if _hp <= 0:
+								Sfx.play(_ename + "_die")
 							var _bar = _e.get_meta("hp_bar", null)
 							if _bar: _bar.size.x = 30.0 * (float(max(_hp,0)) / _e.get_meta("max_hp"))
 							show_floating_text(str(_exp_dmg), _e.global_position + Vector2(0, -40), Color.ORANGE)
@@ -3987,7 +3994,15 @@ func damage_enemy(enemy, amount, is_melee: bool = false):
 		show_floating_text(str(armor_damage) + " (Armor)", enemy.global_position + Vector2(0, -20), Color.YELLOW)
 
 	var hp = enemy.get_meta("hp") - actual_dmg
-	if actual_dmg > 0: show_floating_text(str(actual_dmg), enemy.global_position + Vector2(0, -40), Color.RED)
+	if actual_dmg > 0: 
+		show_floating_text(str(actual_dmg), enemy.global_position + Vector2(0, -40), Color.RED)
+		
+		# --- TAMBAHKAN SUARA KENA HIT DI SINI ---
+		var e_type = str(enemy.get_meta("type", "enemy")).to_lower()
+		e_type = e_type.replace("_boss", "") # Bos tetap pakai suara musuh biasa
+		Sfx.play(e_type + "_hurt")
+		# ----------------------------------------
+		
 	enemy.set_meta("hp", hp)
 	
 	# Update HP Bar
@@ -4011,6 +4026,12 @@ func damage_enemy(enemy, amount, is_melee: bool = false):
 			enemy.set_meta("state", "enraged")
 			
 	if hp <= 0:
+		# --- TAMBAHKAN SUARA MATI DI SINI ---
+		var e_type_die = str(enemy.get_meta("type", "enemy")).to_lower()
+		e_type_die = e_type_die.replace("_boss", "")
+		Sfx.play(e_type_die + "_die")
+		# -------------------------------------
+		
 		if "boss" in enemy.get_meta("type"):
 			show_floating_text("BOSS DEFEATED!", enemy.global_position + Vector2(0, -60), Color.GOLD)
 			if is_instance_valid(boss_ui): 
@@ -4263,6 +4284,12 @@ func take_damage(amount):
 				if _dmg_left > 0:
 					var _hp = _e.get_meta("hp") - _dmg_left
 					_e.set_meta("hp", _hp)
+					
+					# --- TAMBAHKAN INI ---
+					var _ename = _ct.to_lower().replace("_boss", "")
+					Sfx.play(_ename + "_hurt")
+					# ---------------------
+
 					var _bar = _e.get_meta("hp_bar", null)
 					if _bar: _bar.size.x = 30.0 * (float(max(_hp, 0)) / _e.get_meta("max_hp"))
 					if "boss" in _ct and is_instance_valid(boss_bar):
