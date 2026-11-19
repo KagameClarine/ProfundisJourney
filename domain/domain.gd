@@ -3892,7 +3892,7 @@ func update_minions(delta):
 		enemy.move_and_slide()
 
 
-func damage_enemy(enemy, amount, is_melee: bool = false):
+func damage_enemy(enemy, amount, is_melee: bool = false, is_silent: bool = false):
 	if not is_instance_valid(enemy): return
 	var actual_dmg = amount
 	
@@ -3992,16 +3992,36 @@ func damage_enemy(enemy, amount, is_melee: bool = false):
 		actual_dmg -= armor_damage
 		enemy.set_meta("armor_regen_timer", 0.0)
 		show_floating_text(str(armor_damage) + " (Armor)", enemy.global_position + Vector2(0, -20), Color.YELLOW)
+		
+		# --- TAMBAHKAN LOGIKA SUARA ARMOR PECAH DI SINI ---
+		if enemy.get_meta("armor_hp") == 0 and not is_silent:
+			Sfx.play("cave_slime_armor_break")
+		# ---------------------------------------------------
 
 	var hp = enemy.get_meta("hp") - actual_dmg
 	if actual_dmg > 0: 
 		show_floating_text(str(actual_dmg), enemy.global_position + Vector2(0, -40), Color.RED)
 		
-		# --- TAMBAHKAN SUARA KENA HIT DI SINI ---
-		var e_type = str(enemy.get_meta("type", "enemy")).to_lower()
-		e_type = e_type.replace("_boss", "") # Bos tetap pakai suara musuh biasa
-		Sfx.play(e_type + "_hurt")
-		# ----------------------------------------
+		# --- DETEKSI PINTAR SUARA (DENGAN LOGIKA SLIME) ---
+		if not is_silent:
+			var e_type = str(enemy.get_meta("type", "enemy")).to_lower()
+			e_type = e_type.replace("_boss", "")
+			
+			if hp <= 0:
+				# Kalau mati, selalu pakai suara slime mati
+				Sfx.play(e_type + "_die")
+			else:
+				# --- LOGIKA KHUSUS CAVE SLIME ---
+				if e_type == "cave_slime":
+					# Cek apakah armor masih tersisa
+					if enemy.get_meta("armor_hp", 0) > 0:
+						Sfx.play("cave_slime_armor_hurt") # Suara Batu/Keras
+					else:
+						Sfx.play("cave_slime_hurt") # Suara Benyek/Slime
+				else:
+					# Musuh lain (Goblin, Spider, dll)
+					Sfx.play(e_type + "_hurt")
+			# ------------------------------------------------
 		
 	enemy.set_meta("hp", hp)
 	
@@ -4026,11 +4046,6 @@ func damage_enemy(enemy, amount, is_melee: bool = false):
 			enemy.set_meta("state", "enraged")
 			
 	if hp <= 0:
-		# --- TAMBAHKAN SUARA MATI DI SINI ---
-		var e_type_die = str(enemy.get_meta("type", "enemy")).to_lower()
-		e_type_die = e_type_die.replace("_boss", "")
-		Sfx.play(e_type_die + "_die")
-		# -------------------------------------
 		
 		if "boss" in enemy.get_meta("type"):
 			show_floating_text("BOSS DEFEATED!", enemy.global_position + Vector2(0, -60), Color.GOLD)
@@ -4363,6 +4378,9 @@ func take_damage(amount):
 	actual_dmg = max(1, int(actual_dmg))
 	player_hp = max(0, player_hp - actual_dmg)
 	damage_cooldown = 1.0
+	# --- SUARA PEMAIN KENA HIT ---
+	Sfx.play("player_hurt")
+	# -----------------------------
 	show_floating_text("-" + str(actual_dmg) + " HP", clone_player.global_position + Vector2(0,-40), Color.RED)
 	update_hud()
 	
@@ -4401,6 +4419,9 @@ func take_damage(amount):
 	# --------------------------------
 	
 	if player_hp <= 0:
+		# --- SUARA PEMAIN MATI ---
+		Sfx.play("player_die")
+		# -------------------------
 		on_player_death_in_domain()
 
 func bikin_ui_bos():
