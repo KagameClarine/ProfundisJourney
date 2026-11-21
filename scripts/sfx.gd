@@ -63,7 +63,28 @@ func _ready():
 	if ResourceLoader.exists("res://audio/sfx_cave_slime_armor_hurt.mp3"):
 		_sounds["cave_slime_armor_hurt"] = load("res://audio/sfx_cave_slime_armor_hurt.mp3")
 	# -----------------------------------------
-
+	
+	# --- SUARA PROYEKTIL & SKILL BOS ---
+	if ResourceLoader.exists("res://audio/sfx_teleport.mp3"):
+		_sounds["teleport"] = load("res://audio/sfx_teleport.mp3")
+	if ResourceLoader.exists("res://audio/sfx_arrow_shoot.mp3"):
+		_sounds["arrow_shoot"] = load("res://audio/sfx_arrow_shoot.mp3")
+	if ResourceLoader.exists("res://audio/sfx_web_shoot.mp3"):
+		_sounds["web_shoot"] = load("res://audio/sfx_web_shoot.mp3")
+	if ResourceLoader.exists("res://audio/sfx_web_hit.mp3"):
+		_sounds["web_hit"] = load("res://audio/sfx_web_hit.mp3")
+	if ResourceLoader.exists("res://audio/sfx_spider_dash.mp3"):
+		_sounds["spider_dash"] = load("res://audio/sfx_spider_dash.mp3")
+	if ResourceLoader.exists("res://audio/sfx_rock_throw.mp3"):
+		_sounds["rock_throw"] = load("res://audio/sfx_rock_throw.mp3")
+	if ResourceLoader.exists("res://audio/sfx_earthquake.mp3"):
+		_sounds["earthquake"] = load("res://audio/sfx_earthquake.mp3")
+	if ResourceLoader.exists("res://audio/sfx_boulder_throw.mp3"):
+		_sounds["boulder_throw"] = load("res://audio/sfx_boulder_throw.mp3")
+	if ResourceLoader.exists("res://audio/sfx_boulder_impact.mp3"):
+		_sounds["boulder_impact"] = load("res://audio/sfx_boulder_impact.mp3")
+	# ------------------------------------
+	
 	# --- SUARA PEMAIN ---
 	if ResourceLoader.exists("res://audio/sfx_player_hurt.mp3"):
 		_sounds["player_hurt"] = load("res://audio/sfx_player_hurt.mp3")

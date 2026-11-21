@@ -2576,6 +2576,14 @@ func update_arrows(delta):
 		var hit = false
 		var owner_type = arrow.get_meta("owner", "player")
 		
+		# --- FIX 1: CEK BATAS JARAK PROYEKTIL MUSUH ---
+		if arrow.has_meta("spawn_pos") and arrow.has_meta("max_distance"):
+			if arrow.position.distance_to(arrow.get_meta("spawn_pos")) > arrow.get_meta("max_distance"):
+				arrow.queue_free()
+				arrows.remove_at(i)
+				continue
+		# ----------------------------------------------
+		
 		# --- PLAYER BOULDER (Crystal Minigun) ---
 		if arrow.get_meta("is_player_boulder", false):
 			var _bhit = false
@@ -2692,6 +2700,7 @@ func update_arrows(delta):
 				
 				# 1. CEK WEB (Jaring Biasa)
 				if arrow.get_meta("proj_type", "") == "web":
+					Sfx.play("web_hit")
 					player_stun_timer = 2.0
 					player_slow_timer = 3.0
 					show_floating_text("STUNNED!", clone_player.global_position + Vector2(0, -40), Color.WHITE)
@@ -2922,6 +2931,7 @@ func update_arrows(delta):
 		
 		# --- LOGIKA AOE BOULDER (LEDAKAN BATU) ---
 		if hit_wall and arrow.get_meta("proj_type", "") == "boulder":
+			Sfx.play("boulder_impact")
 			# 1. Efek Visual Ledakan (3x3 Blok = 48x48 pixel)
 			var explosion = ColorRect.new()
 			explosion.size = Vector2(48, 48) 
@@ -3524,6 +3534,7 @@ func update_minions(delta):
 					var tween = create_tween()
 					tween.tween_property(enemy, "modulate:a", 1.0, 0.3)
 					show_floating_text("TELEPORT!", enemy.global_position + Vector2(0, -50), Color.PURPLE)
+					Sfx.play("teleport")
 			# ---------------------------------------------
 
 			var state = enemy.get_meta("state", "attack")
@@ -3535,7 +3546,7 @@ func update_minions(delta):
 				enemy.velocity.x = 0 # Diam dan menembak
 				if atk_timer <= 0:
 					# Tembak panah tembus tembok! (Parameter ke-5 = true)
-					spawn_enemy_projectile(enemy.global_position, player_pos, "arrow", int(enemy.get_meta("damage")), true)
+					spawn_enemy_projectile(enemy.global_position, player_pos, "arrow", int(enemy.get_meta("damage")), true, 320.0)
 					atk_timer = 0.75
 				if dist < 128.0:
 					state = "flee"
@@ -3617,6 +3628,7 @@ func update_minions(delta):
 					if web_count >= 2:
 						state = "dash"
 						enemy.set_meta("dash_dir", sign(player_pos.x - enemy.global_position.x))
+						Sfx.play("spider_dash")
 						enemy.set_meta("dash_hit", false)
 					else:
 						pattern_timer = 3.0 
@@ -3678,7 +3690,7 @@ func update_minions(delta):
 			if state == "rock_throw":
 				if sub_timer <= 0:
 					# Tembak batu
-					spawn_enemy_projectile(enemy.global_position, player_pos, "rock", int(enemy.get_meta("damage")))
+					spawn_enemy_projectile(enemy.global_position, player_pos, "rock", int(enemy.get_meta("damage")), false, 320.0)
 					rocks += 1
 					enemy.set_meta("rocks_thrown", rocks)
 					
@@ -3694,6 +3706,7 @@ func update_minions(delta):
 				if pat_timer <= 0:
 					# Mulai hujan kerikil
 					state = "gravel_rain"
+					Sfx.play("earthquake")
 					enemy.set_meta("gravels_dropped", 0)
 					# Jeda 0.1 detik sebelum kerikil pertama muncul
 					enemy.set_meta("sub_timer", 0.1) 
@@ -3745,7 +3758,7 @@ func update_minions(delta):
 				
 			# 3. LEMPAR BATU (Jarak > 8 blok & CD siap)
 			if dist > 128.0 and boulder_cd <= 0:
-				spawn_enemy_projectile(enemy.global_position, player_pos, "boulder", 15)
+				spawn_enemy_projectile(enemy.global_position, player_pos, "boulder", 15, false, 320.0)
 				show_floating_text("BOULDER!", enemy.global_position + Vector2(0, -60), Color.CYAN)
 				boulder_cd = 6.0 # <--- Cooldown dinaikkan jadi 6 detik
 				
@@ -3797,12 +3810,12 @@ func update_minions(delta):
 			elif state == "enraged":
 				enemy.velocity.x = push_force # <--- Terapkan dorongan
 				if atk_timer <= 0:
-					spawn_enemy_projectile(enemy.global_position, player_pos, "arrow", 12)
+					spawn_enemy_projectile(enemy.global_position, player_pos, "arrow", 12, false, 320.0)
 					atk_timer = 2.0
 			else:
 				enemy.velocity.x = push_force # <--- Terapkan dorongan
 				if atk_timer <= 0:
-					spawn_enemy_projectile(enemy.global_position, player_pos, "arrow", 12)
+					spawn_enemy_projectile(enemy.global_position, player_pos, "arrow", 12, false, 320.0)
 					atk_timer = 2.0
 				if dist < 128.0: state = "flee"
 			enemy.set_meta("state", state)
@@ -3839,7 +3852,7 @@ func update_minions(delta):
 			if is_blocked: enemy.velocity.y = -220.0
 			if dist > 128.0 and dist < 240.0 and post_melee_cd <= 0.0 and web_timer <= 0:
 				enemy.set_meta("web_timer", 3.5)
-				spawn_enemy_projectile(enemy.global_position, player_pos, "web", 5)
+				spawn_enemy_projectile(enemy.global_position, player_pos, "web", 5, false, 96.0)
 				
 			if tabrakan:
 				if melee_timer <= 0:
@@ -3861,7 +3874,7 @@ func update_minions(delta):
 					
 			if atk_timer <= 0:
 				if dist > 192.0:
-					spawn_enemy_projectile(enemy.global_position, player_pos, "rock", 35)
+					spawn_enemy_projectile(enemy.global_position, player_pos, "rock", 35, false, 320.0)
 					atk_timer = 2.0
 				elif tabrakan:
 					take_damage(enemy.get_meta("damage"))
@@ -3931,8 +3944,13 @@ func damage_enemy(enemy, amount, is_melee: bool = false, is_silent: bool = false
 			# Shield Pecah!
 			enemy.set_meta("armor_hp", 0)
 			if is_instance_valid(boss_armor_bar): boss_armor_bar.size.x = 0 # <--- Hancurkan bar kuning
-			show_floating_text("SHIELD BROKEN!", enemy.global_position + Vector2(0, -60), Color.RED)
 			
+			# --- TAMBAHKAN SUARA PECAH ---
+			if not is_silent:
+				Sfx.play("cave_slime_armor_break")
+			# -----------------------------
+			
+			show_floating_text("SHIELD BROKEN!", enemy.global_position + Vector2(0, -60), Color.RED)
 			# Efek Visual Ledakan
 			var explosion = ColorRect.new()
 			explosion.size = Vector2(100, 100)
@@ -3952,6 +3970,11 @@ func damage_enemy(enemy, amount, is_melee: bool = false, is_silent: bool = false
 			take_damage(1) # Damage murni 1
 		else:
 			enemy.set_meta("armor_hp", armor_hp - actual_dmg)
+			
+			# --- TAMBAHKAN SUARA KENA HIT ---
+			if not is_silent:
+				Sfx.play("cave_slime_armor_hurt")
+			# --------------------------------
 			
 			# Update Bar Armor (Kuning)
 			if is_instance_valid(boss_armor_bar):
@@ -3993,10 +4016,12 @@ func damage_enemy(enemy, amount, is_melee: bool = false, is_silent: bool = false
 		enemy.set_meta("armor_regen_timer", 0.0)
 		show_floating_text(str(armor_damage) + " (Armor)", enemy.global_position + Vector2(0, -20), Color.YELLOW)
 		
-		# --- TAMBAHKAN LOGIKA SUARA ARMOR PECAH DI SINI ---
-		if enemy.get_meta("armor_hp") == 0 and not is_silent:
-			Sfx.play("cave_slime_armor_break")
-		# ---------------------------------------------------
+		# --- FIX 2: SUARA ARMOR CAVE SLIME ---
+		if not is_silent:
+			Sfx.play("cave_slime_armor_hurt") # Suara batu/keras saat dipukul
+			if enemy.get_meta("armor_hp") == 0:
+				Sfx.play("cave_slime_armor_break") # Suara pecah saat habis
+		# -------------------------------------
 
 	var hp = enemy.get_meta("hp") - actual_dmg
 	if actual_dmg > 0: 
@@ -4130,15 +4155,21 @@ func on_player_death_in_domain():
 		player_hp = 1 
 		close_domain()
 
-func spawn_enemy_projectile(start_pos: Vector2, target_pos: Vector2, proj_type: String, dmg: int, pierce_wall: bool = false):
+# Tambahkan max_distance: float = 9999.0 di parameter paling belakang
+func spawn_enemy_projectile(start_pos: Vector2, target_pos: Vector2, proj_type: String, dmg: int, pierce_wall: bool = false, max_distance: float = 9999.0):
 	var proj = ColorRect.new()
 	proj.position = start_pos
-	proj.z_index = 15 # <--- KUNCI: Bikin panah ada di depan latar belakang
+	proj.z_index = 15
 	proj.set_meta("is_enemy_proj", true)
 	proj.set_meta("proj_type", proj_type)
 	proj.set_meta("damage", dmg)
 	proj.set_meta("pierce_wall", pierce_wall)
 	proj.set_meta("velocity", (target_pos - start_pos).normalized())
+	
+	# --- TAMBAHKAN 2 BARIS INI ---
+	proj.set_meta("spawn_pos", start_pos)
+	proj.set_meta("max_distance", max_distance)
+	# -----------------------------
 	
 	if proj_type == "rock":
 		proj.size = Vector2(12, 12); proj.color = Color(0.5, 0.5, 0.5)
@@ -4147,15 +4178,23 @@ func spawn_enemy_projectile(start_pos: Vector2, target_pos: Vector2, proj_type: 
 		proj.size = Vector2(16, 16); proj.color = Color(0.9, 0.9, 0.9, 0.8)
 		proj.set_meta("velocity", proj.get_meta("velocity") * 150.0)
 	elif proj_type == "arrow":
-		proj.size = Vector2(20, 6) # Sedikit lebih besar
-		proj.color = Color(1.0, 0.8, 0.2) # Warna Emas/Kuning terang biar kontras sama merah
+		proj.size = Vector2(20, 6)
+		proj.color = Color(1.0, 0.8, 0.2)
 		proj.set_meta("velocity", proj.get_meta("velocity") * 500.0)
 	elif proj_type == "boulder":
-		proj.size = Vector2(32, 32); proj.color = Color(0.4, 0.6, 0.8) # Batu Kristal
-		proj.set_meta("velocity", proj.get_meta("velocity") * 400.0) # Agak lambat
+		proj.size = Vector2(32, 32); proj.color = Color(0.4, 0.6, 0.8)
+		proj.set_meta("velocity", proj.get_meta("velocity") * 400.0)
 		
 	proj.set_meta("life_timer", 2.0)
 	proj.rotation = proj.get_meta("velocity").angle()
+	
+	# --- SUARA TEMBAK OTOMATIS ---
+	if proj_type == "arrow": Sfx.play("arrow_shoot")
+	elif proj_type == "web": Sfx.play("web_shoot")
+	elif proj_type == "rock": Sfx.play("rock_throw")
+	elif proj_type == "boulder": Sfx.play("boulder_throw")
+	# -----------------------------
+	
 	add_child(proj)
 	arrows.append(proj)
 
