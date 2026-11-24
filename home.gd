@@ -371,10 +371,8 @@ func get_item_color(item_name: String) -> Color:
 func _ready():
 	# --- LOGIKA MUSIK HOME ---
 	if Global.tutorial_step == 0:
-		# T1: Hening total
 		MusicManager.stop_bgm() 
 	else:
-		# Post-T1: Putar musik Home (dinamis dari fungsi baru)
 		play_home_bgm()
 	# -------------------------
 	
@@ -385,65 +383,90 @@ func _ready():
 	if has_node("Player/Camera2D"):
 		$Player/Camera2D.make_current()
 	
-	# --- SAFETY NET: Strip material dungeon yang bocor (force close, crash, dll) ---
+	# --- SAFETY NET: Strip material dungeon yang bocor ---
 	Global.strip_dungeon_materials()
-	# -------------------------------------------------------------------------------
-	
-	# ... (sisa kode _ready kamu lanjut di bawah) ...
-	# -------------------------------------------------------------------------------
-	
-	# --- POST-T3 CORE LOADOUT (4 senjata OP - UUID SYSTEM) ---
-	if not Global.loadout_v6_done:
-		Global.loadout_v6_done = true
-		
+	# -----------------------------------------------------
+
+	# ========================================================================
+	# --- DEBUG MODE: UNLOCK SEMUA SENJATA & MAKANAN UNTUK TESTING SFX ---
+	# (PENTING: Ubah 'if true:' menjadi 'if false:' setelah selesai testing 
+	#  agar game kembali ke loadout normal 4 item!)
+	if true: 
 		Global.saved_inventory.clear()
 		Global.ore_storage.clear()
 		Global.material_storage.clear()
 		Global.weapon_storage.clear()
 		Global.unlocked_blueprints.clear()
 		
-		var uid_swarmid = Global.create_weapon_key("Swarmid Drill")
-		var uid_galahad = Global.create_weapon_key("Galahad Chimelin")
-		var uid_marble = Global.create_weapon_key("Marble Slingshot")
-		var uid_crystal = Global.create_weapon_key("Crystal Armor")
+		var all_test_items = [
+			# Tools
+			"Stone Pickaxe", "Iron Pickaxe", "Swarmid Drill", "Bonecrusher", "Magic Pickaxe",
+			# Melee
+			"Fist", "Wooden Sword", "Iron Sword", "Menacing Dagger", 
+			"Sharding Sword", "Silver Gray Sword", "Stormjade Cutter", 
+			"Revenger Crystallinum", "Galahad Chimelin", "Golden Conductor", "Crystal Hammer",
+			# Range
+			"Bow", "Hunter Bow", "Iron Bow", "Marble Slingshot", "Ricochet Bow", 
+			"Sticky Crossbow", "Headhitter Heavy Bow", "Bounty Bow", 
+			"Explosive Crossbow", "Mourning Bow", "Crystal Minigun",
+			# Magic / Utility
+			"Heretic Staff", "Maniacal Chainsaw", "Radiance Scepter",
+			# Armor
+			"Iron Armor", "Heavy Amethyst Armor", "Crystal Armor", 
+			"Metal Skin Armor", "Shining Justice", "Tenacity Battle Armor", "Deep Cave Armor",
+			# Consumables (Untuk testing SFX makan: eat_dry & eat_wet)
+			"Banana", "Grape", "Bacon", "Pizza Slice", "Burger", "Golden Burger", "Frozen Apple"
+		]
 		
-		Global.saved_inventory[uid_swarmid] = 1
-		Global.saved_inventory[uid_galahad] = 1
-		Global.saved_inventory[uid_marble] = 1
-		Global.saved_inventory[uid_crystal] = 1
+		# Masukkan ke inventory & set level 1 (menggunakan sistem UUID)
+		for item in all_test_items:
+			var is_weapon = item_data.get(item, {}).has("weapon_type")
+			if is_weapon:
+				var uid = Global.create_weapon_key(item)
+				Global.saved_inventory[uid] = 1
+				Global.item_levels[uid] = 1
+			else:
+				Global.saved_inventory[item] = 5 # Kasih 5x untuk makanan/testing
 		
-		Global.item_levels[uid_swarmid] = 1
-		Global.item_levels[uid_galahad] = 1
-		Global.item_levels[uid_marble] = 1
-		Global.item_levels[uid_crystal] = 1
-		
+		# Atur Hotbar agar rapi dan mewakili berbagai kategori SFX (7 slot: 0-6)
 		Global.hotbar_items[0] = "Swarmid Drill"
-		Global.hotbar_uuids[0] = uid_swarmid
-		Global.hotbar_items[1] = "Galahad Chimelin"
-		Global.hotbar_uuids[1] = uid_galahad
-		Global.hotbar_items[2] = "Marble Slingshot"
-		Global.hotbar_uuids[2] = uid_marble
-		Global.equipped_armor = "Crystal Armor"
-		Global.equipped_armor_uuid = uid_crystal
+		Global.hotbar_uuids[0] = Global.create_weapon_key("Swarmid Drill")
 		
-		for i in range(3, 7):
-			Global.hotbar_items[i] = null
-			Global.hotbar_uuids[i] = null
-			
+		Global.hotbar_items[1] = "Galahad Chimelin"
+		Global.hotbar_uuids[1] = Global.create_weapon_key("Galahad Chimelin")
+		
+		Global.hotbar_items[2] = "Crystal Minigun"
+		Global.hotbar_uuids[2] = Global.create_weapon_key("Crystal Minigun")
+		
+		Global.hotbar_items[3] = "Golden Conductor"
+		Global.hotbar_uuids[3] = Global.create_weapon_key("Golden Conductor")
+		
+		Global.hotbar_items[4] = "Heretic Staff"
+		Global.hotbar_uuids[4] = Global.create_weapon_key("Heretic Staff")
+		
+		Global.hotbar_items[5] = "Maniacal Chainsaw"
+		Global.hotbar_uuids[5] = Global.create_weapon_key("Maniacal Chainsaw")
+		
+		Global.hotbar_items[6] = "Bounty Bow"
+		Global.hotbar_uuids[6] = Global.create_weapon_key("Bounty Bow")
+		
+		# Equip Armor default
+		Global.equipped_armor = "Crystal Armor"
+		Global.equipped_armor_uuid = Global.create_weapon_key("Crystal Armor")
+		
+		Global.loadout_v6_done = true # Tandai supaya tidak reset lagi
 		Global.save_game()
-		print("[POST-T3] Loadout V6: UUID System applied.")
-	# ----------------------------------------
+		print("[DEBUG] ALL WEAPONS, ARMOR & CONSUMABLES UNLOCKED FOR SFX TESTING!")
+	# ========================================================================
 
-	# (kode asli kamu lanjut di bawahnya...)
+	# (Kode asli kamu untuk tutorial fix & anti-softlock)
 	if Global.tutorial_completed and Global.tutorial_step == 0:
 		Global.tutorial_step = 1
 		print("FIXED TUTORIAL STEP TO 1")
 	
-	# ANTI-SOFTLOCK GOLD (Hanya jalan sekali saat pertama masuk step 4)
 	if Global.tutorial_step == 4 and not Global.tut_home_checked_gold:
 		Global.tut_home_checked_gold = true
 		var total_value = Global.gold_coins
-		# Hitung nilai ore di backpack & storage
 		var ores = {"Copper": 1, "Iron": 2, "Silver": 4, "Gold": 7, "Mithril": 15}
 		for ore in ores.keys():
 			total_value += Global.saved_inventory.get(ore, 0) * ores[ore]
@@ -451,7 +474,7 @@ func _ready():
 			
 		if total_value < 120:
 			Global.gold_coins += 120
-			Global.tutorial_step = 5 # Skip step 1, langsung ke smelting
+			Global.tutorial_step = 5 
 			Global.save_game()
 			show_home_dialog("Old Miner: \"Wow seems like u are in a hurry... welp cant do nothing about that! here's 120 gold!\"")
 			update_objective_ui()
@@ -481,9 +504,8 @@ func _ready():
 	if Global.tutorial_completed or Global.tutorial_step >= 1:
 		spawn_buildings()
 		spawn_interactables()
-		spawn_testing_area() # <--- TAMBAHKAN INI
+		spawn_testing_area() 
 		
-		# Munculkan Forge & Smelter kalau T2 udah selesai (step 4+)
 		if Global.tutorial_step >= 4:
 			spawn_stations()
 			

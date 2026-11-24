@@ -16,6 +16,9 @@ var clone_player: CharacterBody2D
 var domain_cam: Camera2D
 var ui_label: Label
 var debug_dist_label: Label
+var chainsaw_player: AudioStreamPlayer
+var drill_player: AudioStreamPlayer
+var laser_player: AudioStreamPlayer
 
 # --- UI HUD ---
 var hud_hp_hearts: Array = []
@@ -124,6 +127,21 @@ func _ready() -> void:
 	_play_domain_bgm() # <--- Panggil fungsi sakti ini saja
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	
+	# --- INISIALISASI AUDIO PLAYER UNTUK MESIN (CONTINUOUS SFX) ---
+	chainsaw_player = AudioStreamPlayer.new()
+	chainsaw_player.bus = "Master"
+	add_child(chainsaw_player)
+	
+	drill_player = AudioStreamPlayer.new()
+	drill_player.bus = "Master"
+	add_child(drill_player)
+	
+	laser_player = AudioStreamPlayer.new()
+	laser_player.bus = "Master"
+	add_child(laser_player)
+	
+	# ---------------------------------------------------------------
+	
 	bikin_hud_domain()
 	bikin_ui_bos()
 	bikin_ui_inventory()
@@ -143,6 +161,67 @@ func _process(delta):
 		_magic_beam_line = null
 	if galahad_parry_cd > 0: galahad_parry_cd -= delta
 	if is_player_dead: return
+	
+	# =========================================================================
+	# 1. LOGIKA SFX MESIN CONTINUOUS (WAJIB DI LEVEL PALING ATAS _process)
+	# Kode ini dibaca SETIAP FRAME, terlepas dari apakah mouse sedang diklik atau tidak.
+	var held_item = Global.hotbar_items[main_ref.selected_hotbar_index]
+	var is_mouse_held = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+	
+	if held_item == "Maniacal Chainsaw" and chainsaw_exhausted_timer <= 0 and is_mouse_held:
+		if not chainsaw_player.playing:
+			chainsaw_player.stream = load("res://audio/sfx_chainsaw_idle.ogg")
+			chainsaw_player.stream.loop = true
+			chainsaw_player.play()
+			
+	elif held_item == "Magic Pickaxe" and is_mouse_held:
+		if not laser_player.playing:
+			laser_player.stream = load("res://audio/sfx_laser_cast.ogg")
+			laser_player.stream.loop = true
+			laser_player.play()
+			
+	elif held_item == "Swarmid Drill" and swarmid_exhausted_timer <= 0 and is_mouse_held:
+		if not drill_player.playing:
+			drill_player.stream = load("res://audio/sfx_drill_idle.ogg")
+			drill_player.stream.loop = true
+			drill_player.play()
+			
+	else:
+		# INI KUNCINYA: Jika TIDAK memenuhi syarat di atas (lepas klik / ganti senjata / exhausted), MATIKAN PAKSA!
+		if chainsaw_player.playing: 
+			chainsaw_player.stop()
+		if laser_player.playing: 
+			laser_player.stop()
+		if drill_player.playing: 
+			drill_player.stop()
+	# =========================================================================
+	
+	# =========================================================================
+	# 2. LOGIKA SFX CHARGE SENJATA (SEKALI PLAY SAAT MULAI CHARGE)
+	var is_right_click_held = Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
+	
+	# --- SFX LISTRIK GOLDEN CONDUCTOR (TIAP 0.3 DETIK SAAT FULL CHARGE) ---
+	if held_item == "Golden Conductor" and conductor_charging and conductor_charge_timer >= 3.0:
+		if not has_meta("elec_timer"): set_meta("elec_timer", 0.0)
+		var _et = get_meta("elec_timer") + delta
+		if _et >= 0.3:
+			Sfx.play("conductor_electric")
+			_et = 0.0
+		set_meta("elec_timer", _et)
+	else:
+		if has_meta("elec_timer"): remove_meta("elec_timer")
+	
+	# Golden Conductor Electric - Loop tiap 0.3 detik saat FULL CHARGE
+	if held_item == "Golden Conductor" and conductor_charging and conductor_charge_timer >= 3.0:
+		if not has_meta("elec_timer"): set_meta("elec_timer", 0.0)
+		var _et = get_meta("elec_timer") + delta
+		if _et >= 0.3:
+			Sfx.play("conductor_electric")
+			_et = 0.0
+		set_meta("elec_timer", _et)
+	else:
+		remove_meta("elec_timer")
+	# =========================================================================
 	
 	# --- LOGIKA STUN & PETRIFY ---
 	if player_stun_timer > 0 or deep_cave_active:
@@ -165,7 +244,7 @@ func _process(delta):
 		if clone_player.speed == 300.0: clone_player.speed = 150.0
 	elif clone_player.speed == 150.0:
 		clone_player.speed = 300.0
-	# ---------------------------
+
 	# Debug Jarak
 	if is_instance_valid(clone_player) and is_instance_valid(debug_dist_label):
 		var jarak_blok = (700.0 - clone_player.global_position.x) / 16.0
@@ -194,7 +273,6 @@ func _process(delta):
 		minigun_fire_timer = move_toward(minigun_fire_timer, 0, delta)
 	if _current_held != "Maniacal Chainsaw":
 		chainsaw_use_timer = move_toward(chainsaw_use_timer, 0, delta)
-	# -----------------------------------------------
 	
 	if minigun_exhausted_timer > 0:
 		minigun_exhausted_timer -= delta
@@ -209,129 +287,48 @@ func _process(delta):
 			swarmid_exhausted_timer = 3.5
 			swarmid_use_timer = 0.0
 			show_floating_text("DRILL EXHAUSTED!", clone_player.global_position + Vector2(0, -60), Color.RED)
+			Sfx.play("machine_exhausted")
 	elif _current_held != "Swarmid Drill" or not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
 		swarmid_use_timer = move_toward(swarmid_use_timer, 0, delta * 2.0)
 	
 	if hammer_charging: hammer_charge_timer += delta
 	if stormjade_charging: stormjade_charge_timer += delta
 	
+	if conductor_charging:
+		conductor_charge_timer += delta
+		conductor_tick_timer += delta
+		if conductor_tick_timer >= 0.5:
+			conductor_tick_timer = 0.0
+			var _tick_dmg = int(54 * 0.05)
+			for _e in enemies.duplicate():
+				if is_instance_valid(_e) and clone_player.global_position.distance_to(_e.global_position) < 64.0:
+					var _cached_type = _e.get_meta("type")
+					var _hp = _e.get_meta("hp") - _tick_dmg
+					_e.set_meta("hp", _hp)
+					var _bar = _e.get_meta("hp_bar", null)
+					if _bar: _bar.size.x = 30.0 * (float(max(_hp,0)) / _e.get_meta("max_hp"))
+					show_floating_text(str(_tick_dmg), _e.global_position + Vector2(0, -40), Color.YELLOW)
+					if _hp <= 0:
+						var _ename = _cached_type.to_lower().replace("_boss", "")
+						Sfx.play(_ename + "_die")
+						if "boss" in _cached_type:
+							if is_instance_valid(boss_ui): boss_ui.visible = false
+							is_boss_defeated = true
+							spawn_boss_chest()
+						enemies.erase(_e)
+						_e.queue_free()
+	
 	# Klik Kiri (Attack / Mine / Place Block)
 	if not is_inventory_open and not is_char_open and attack_cooldown <= 0 and player_stun_timer <= 0 and not deep_cave_active:
 		var _held_check = Global.hotbar_items[main_ref.selected_hotbar_index]
 		
-		# --- GOLDEN CONDUCTOR ---
-		if _held_check == "Golden Conductor":
-			if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
-				if not conductor_charging:
-					conductor_charging = true
-					conductor_charge_timer = 0.0
-					conductor_tick_timer = 0.0
-			else:
-				if conductor_charging:
-					if conductor_charge_timer >= 3.0:
-						var _exp_dmg = int(54 * 1.7 * main_ref.buff_dmg_mult)
-						var _dir_x = sign(get_global_mouse_position().x - clone_player.global_position.x)
-						if _dir_x == 0: _dir_x = 1
-						var _player_bottom = clone_player.global_position.y + 32
-						var _max_dist = 128.0
-						
-						var _ray_y = _player_bottom - 12
-						var _ray_start = Vector2(clone_player.global_position.x, _ray_y)
-						var _ray_end = _ray_start + Vector2(_dir_x * _max_dist, 0)
-						var _space = get_world_2d().direct_space_state
-						var _q = PhysicsRayQueryParameters2D.create(_ray_start, _ray_end, 1)
-						var _hit = _space.intersect_ray(_q)
-						if _hit:
-							_max_dist = max(8.0, _ray_start.distance_to(_hit.position))
-						
-						for _e in enemies.duplicate():
-							if not is_instance_valid(_e): continue
-							var _e_size_h = _e.get_meta("size_h", _e.get_meta("size", 16.0))
-							var _e_bottom = _e.global_position.y + _e_size_h / 2.0
-							var _tol = max(24.0, _e_size_h / 2.0 + 8.0)
-							if abs(_e_bottom - _player_bottom) > _tol: continue
-							var _dx = _e.global_position.x - clone_player.global_position.x
-							if _dir_x > 0 and (_dx < -16 or _dx > _max_dist + 16): continue
-							if _dir_x < 0 and (_dx > 16 or _dx < -_max_dist - 16): continue
-							
-							var _cached_type = _e.get_meta("type")
-							var _hp = _e.get_meta("hp") - _exp_dmg
-							_e.set_meta("hp", _hp)
-							# --- TAMBAHKAN INI ---
-							var _ename = _cached_type.to_lower().replace("_boss", "")
-							Sfx.play(_ename + "_hurt")
-							# ---------------------
-
-							if _hp <= 0:
-								Sfx.play(_ename + "_die")
-							var _bar = _e.get_meta("hp_bar", null)
-							if _bar: _bar.size.x = 30.0 * (float(max(_hp,0)) / _e.get_meta("max_hp"))
-							show_floating_text(str(_exp_dmg), _e.global_position + Vector2(0, -40), Color.ORANGE)
-							
-							if _hp <= 0:
-								if "boss" in _cached_type:
-									show_floating_text("BOSS DEFEATED!", _e.global_position + Vector2(0, -60), Color.GOLD)
-									if is_instance_valid(boss_ui): boss_ui.visible = false
-									is_boss_defeated = true
-									spawn_boss_chest()
-								enemies.erase(_e)
-								_e.queue_free()
-						
-						var _exp = ColorRect.new()
-						_exp.size = Vector2(_max_dist, 24)
-						if _dir_x > 0:
-							_exp.position = Vector2(clone_player.global_position.x, _player_bottom - 24)
-						else:
-							_exp.position = Vector2(clone_player.global_position.x - _max_dist, _player_bottom - 24)
-						_exp.color = Color(1.0, 0.8, 0.2, 0.8)
-						_exp.z_index = 15
-						add_child(_exp)
-						var _t = create_tween()
-						_t.tween_property(_exp, "modulate:a", 0.0, 0.3)
-						_t.tween_callback(_exp.queue_free)
-						attack_cooldown = 1.0
-					else:
-						if attack_cooldown <= 0:
-							var mouse_world_pos = get_global_mouse_position()
-							await try_attack(mouse_world_pos, false)
-							attack_cooldown = 1.0
-					conductor_charging = false
-					conductor_charge_timer = 0.0
-					conductor_tick_timer = 0.0
-			if conductor_charging:
-				conductor_charge_timer += delta
-				conductor_tick_timer += delta
-				if conductor_tick_timer >= 0.5:
-					conductor_tick_timer = 0.0
-					var _tick_dmg = int(54 * 0.05)
-					for _e in enemies.duplicate():
-						if is_instance_valid(_e) and clone_player.global_position.distance_to(_e.global_position) < 64.0:
-							var _cached_type = _e.get_meta("type")
-							var _hp = _e.get_meta("hp") - _tick_dmg
-							_e.set_meta("hp", _hp)
-							var _bar = _e.get_meta("hp_bar", null)
-							if _bar: _bar.size.x = 30.0 * (float(max(_hp,0)) / _e.get_meta("max_hp"))
-							show_floating_text(str(_tick_dmg), _e.global_position + Vector2(0, -40), Color.YELLOW)
-							if _hp <= 0:
-								if "boss" in _cached_type:
-									if is_instance_valid(boss_ui): boss_ui.visible = false
-									is_boss_defeated = true
-									spawn_boss_chest()
-								enemies.erase(_e)
-								_e.queue_free()
-			
-			update_arrows(delta)
-			return
-		# ------------------------
-		
 		if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
-			var held_item = _held_check
-			var w_type = main_ref.item_data.get(held_item, {}).get("weapon_type", "")
-			var tile_id = main_ref.item_data.get(held_item, {}).get("tile", -1)
+			var w_type = main_ref.item_data.get(_held_check, {}).get("weapon_type", "")
+			var tile_id = main_ref.item_data.get(_held_check, {}).get("tile", -1)
 			
-			# --- RADIANCE SCEPTER (Langsung di _process) ---
-			if held_item == "Radiance Scepter" and attack_cooldown <= 0:
-				var _item_stats = Global.get_effective_stats(held_item, main_ref.item_data.get(held_item, {}))
+			# --- RADIANCE SCEPTER ---
+			if _held_check == "Radiance Scepter" and attack_cooldown <= 0:
+				var _item_stats = Global.get_effective_stats(_held_check, main_ref.item_data.get(_held_check, {}))
 				var _mana_cost = _item_stats.get("mana_cost", 25)
 				if player_mana >= _mana_cost:
 					player_mana -= _mana_cost
@@ -357,25 +354,42 @@ func _process(delta):
 				else:
 					show_floating_text("Not enough Mana!", clone_player.global_position, Color.BLUE)
 					attack_cooldown = 0.5
-			# -------------------------------------------
 			
 			# 1. Logika Nambang (Pickaxe)
-			if held_item in ["Stone Pickaxe", "Iron Pickaxe", "Swarmid Drill", "Bonecrusher", "Pneumatic Drill"]:
-				if held_item == "Swarmid Drill" and swarmid_exhausted_timer > 0:
+			if _held_check in ["Stone Pickaxe", "Iron Pickaxe", "Swarmid Drill", "Bonecrusher", "Pneumatic Drill"]:
+				if _held_check == "Swarmid Drill" and swarmid_exhausted_timer > 0:
 					show_floating_text("EXHAUSTED!", clone_player.global_position, Color.RED)
 					target_block_node = null
 					if is_instance_valid(crack_sprite): crack_sprite.visible = false
 				else:
-					try_mine_block(get_global_mouse_position(), held_item, delta)
-			elif held_item == "Magic Pickaxe":
+					try_mine_block(get_global_mouse_position(), _held_check, delta)
+			elif _held_check == "Magic Pickaxe":
 				_handle_magic_pickaxe_domain(get_global_mouse_position(), delta)
+				
 			# 2. Logika Serang (Sword, Bow, dll)
 			elif w_type != "":
+				# Tebasan Ringan
+				if _held_check in ["Wooden Sword", "Menacing Dagger", "Revenger Crystallinum"]:
+					Sfx.play("melee_slash_light")
+				# Tebasan Standar
+				elif _held_check in ["Iron Sword", "Silver Gray Sword", "Stormjade Cutter"]:
+					Sfx.play("melee_slash_standard")
+				# Magic Sword (Sharding)
+				elif _held_check == "Sharding Sword":
+					Sfx.play("magic_sword")
+				# Heavy Sword (Galahad)
+				elif _held_check == "Galahad Chimelin":
+					Sfx.play("heavy_sword")
+				# Hammer Swing
+				elif _held_check in ["Golden Conductor", "Crystal Hammer"]:
+					Sfx.play("hammer_swing")
+				
+				# PANGGIL SERANGAN
 				try_attack(get_global_mouse_position(), false)
+				
 			# 3. Logika Taruh Blok / Torch
-						# 3. Logika Taruh Blok / Torch
-			elif held_item != null and (tile_id != -1 or held_item == "Torch"):
-				try_place_block(get_global_mouse_position(), held_item)
+			elif _held_check != null and (tile_id != -1 or _held_check == "Torch"):
+				try_place_block(get_global_mouse_position(), _held_check)
 		else:
 			target_block_node = null
 			mine_timer = 0.0
@@ -397,7 +411,6 @@ func _process(delta):
 			deep_cave_active = false
 			clone_player.set_physics_process(true)
 			show_floating_text("RECOVERED!", clone_player.global_position + Vector2(0, -60), Color.GREEN)
-	# ------------------------------
 	
 	# --- BOUNTY BOW TIMER ---
 	if bounty_stack_timer > 0:
@@ -405,7 +418,6 @@ func _process(delta):
 		if bounty_stack_timer <= 0 and bounty_bow_stacks > 0:
 			bounty_bow_stacks = 0
 			show_floating_text("Bounty Reset!", clone_player.global_position + Vector2(0, -80), Color.GRAY)
-	# ------------------------
 	
 	# --- REVENGER TIMER ---
 	if revenger_timer > 0:
@@ -415,7 +427,6 @@ func _process(delta):
 		if revenger_timer <= 0:
 			revenger_stacks = 0
 			revenger_target = null
-	# ----------------------
 	
 	# --- MAGIC VULN RESET 3s (Sharding Sword) ---
 	for _e in enemies:
@@ -426,7 +437,6 @@ func _process(delta):
 				_e.remove_meta("magic_vuln_timer")
 			else:
 				_e.set_meta("magic_vuln_timer", _t)
-	# ---------------------------------------------
 	
 	# --- SGS ACCELERATE RESET 5s ---
 	if sgs_accelerate_stacks > 0:
@@ -437,7 +447,6 @@ func _process(delta):
 			remove_meta("sgs_reset_timer")
 		else:
 			set_meta("sgs_reset_timer", _sgs_t)
-	# -------------------------------
 	
 	update_arrows(delta)
 
@@ -2020,12 +2029,22 @@ func _input(event: InputEvent) -> void:
 				elif held == "Crystal Hammer":
 					hammer_charging = true
 					hammer_charge_timer = 0.0
+					Sfx.play("hammer_charge")
 				elif held == "Stormjade Cutter":
 					stormjade_charging = true
 					stormjade_charge_timer = 0.0
+					Sfx.play("stormjade_charge")
+				elif held == "Golden Conductor":
+					conductor_charging = true
+					conductor_charge_timer = 0.0
+					conductor_tick_timer = 0.0
+					Sfx.play("conductor_charge")
 				elif held == "Galahad Chimelin" and galahad_parry_cd <= 0.0:
 					galahad_parry_active = true
 					galahad_parry_cd = 3.0
+					# --- SUARA PARRY AKTIF ---
+					Sfx.play("parry_activate")
+					# -------------------------
 					show_floating_text("PARRY!", clone_player.global_position, Color.GOLD)
 					await get_tree().create_timer(0.5).timeout
 					galahad_parry_active = false
@@ -2041,6 +2060,9 @@ func _input(event: InputEvent) -> void:
 				hammer_charging = false
 				if attack_cooldown <= 0:
 					if hammer_charge_timer >= 2.0:
+						# --- TAMBAHKAN INI: SUARA SLAM ---
+						Sfx.play("heavy_slam")
+						# --------------------------------
 						var _facing = sign(get_global_mouse_position().x - clone_player.global_position.x)
 						if _facing == 0: _facing = 1
 						var _reach = 80.0
@@ -2073,6 +2095,9 @@ func _input(event: InputEvent) -> void:
 				stormjade_charging = false
 				if attack_cooldown <= 0:
 					if stormjade_charge_timer >= 3.0:
+						# --- TAMBAHKAN INI: SUARA DASH ---
+						Sfx.play("stormjade_dash")
+						# --------------------------------
 						var _dir = (get_global_mouse_position() - clone_player.global_position).normalized()
 						var _max_dist = 128.0
 						
@@ -2100,6 +2125,74 @@ func _input(event: InputEvent) -> void:
 					else:
 						try_attack(get_global_mouse_position(), false)
 				stormjade_charge_timer = 0.0
+			
+			# --- GOLDEN CONDUCTOR: charge release ---
+			if held == "Golden Conductor" and conductor_charging:
+				conductor_charging = false
+				if attack_cooldown <= 0:
+					if conductor_charge_timer >= 3.0:
+						Sfx.play("heavy_slam")
+						var _exp_dmg = int(54 * 1.7 * main_ref.buff_dmg_mult)
+						var _dir_x = sign(get_global_mouse_position().x - clone_player.global_position.x)
+						if _dir_x == 0: _dir_x = 1
+						var _player_bottom = clone_player.global_position.y + 32
+						var _max_dist = 128.0
+						
+						var _ray_y = _player_bottom - 12
+						var _ray_start = Vector2(clone_player.global_position.x, _ray_y)
+						var _ray_end = _ray_start + Vector2(_dir_x * _max_dist, 0)
+						var _space = get_world_2d().direct_space_state
+						var _q = PhysicsRayQueryParameters2D.create(_ray_start, _ray_end, 1)
+						var _hit = _space.intersect_ray(_q)
+						if _hit:
+							_max_dist = max(8.0, _ray_start.distance_to(_hit.position))
+						
+						for _e in enemies.duplicate():
+							if not is_instance_valid(_e): continue
+							var _e_size_h = _e.get_meta("size_h", _e.get_meta("size", 16.0))
+							var _e_bottom = _e.global_position.y + _e_size_h / 2.0
+							var _tol = max(24.0, _e_size_h / 2.0 + 8.0)
+							if abs(_e_bottom - _player_bottom) > _tol: continue
+							var _dx = _e.global_position.x - clone_player.global_position.x
+							if _dir_x > 0 and (_dx < -16 or _dx > _max_dist + 16): continue
+							if _dir_x < 0 and (_dx > 16 or _dx < -_max_dist - 16): continue
+							
+							var _cached_type = _e.get_meta("type")
+							var _hp = _e.get_meta("hp") - _exp_dmg
+							_e.set_meta("hp", _hp)
+							var _ename = _cached_type.to_lower().replace("_boss", "")
+							Sfx.play(_ename + "_hurt")
+							if _hp <= 0:
+								Sfx.play(_ename + "_die")
+							var _bar = _e.get_meta("hp_bar", null)
+							if _bar: _bar.size.x = 30.0 * (float(max(_hp,0)) / _e.get_meta("max_hp"))
+							show_floating_text(str(_exp_dmg), _e.global_position + Vector2(0, -40), Color.ORANGE)
+							if _hp <= 0:
+								if "boss" in _cached_type:
+									show_floating_text("BOSS DEFEATED!", _e.global_position + Vector2(0, -60), Color.GOLD)
+									if is_instance_valid(boss_ui): boss_ui.visible = false
+									is_boss_defeated = true
+									spawn_boss_chest()
+								enemies.erase(_e)
+								_e.queue_free()
+						
+						var _exp = ColorRect.new()
+						_exp.size = Vector2(_max_dist, 24)
+						if _dir_x > 0:
+							_exp.position = Vector2(clone_player.global_position.x, _player_bottom - 24)
+						else:
+							_exp.position = Vector2(clone_player.global_position.x - _max_dist, _player_bottom - 24)
+						_exp.color = Color(1.0, 0.8, 0.2, 0.8)
+						_exp.z_index = 15
+						add_child(_exp)
+						var _t = create_tween()
+						_t.tween_property(_exp, "modulate:a", 0.0, 0.3)
+						_t.tween_callback(_exp.queue_free)
+						attack_cooldown = 1.0
+					else:
+						try_attack(get_global_mouse_position(), false)
+				conductor_charge_timer = 0.0
+				conductor_tick_timer = 0.0
 
 func use_food_box():
 	if inventory.get("Food Box", 0) <= 0: return
@@ -2132,7 +2225,14 @@ func consume_food(food_name):
 		inventory.erase(food_name)
 		for i in range(7):
 			if Global.hotbar_items[i] == food_name: Global.hotbar_items[i] = null
-			
+	
+	# --- SUARA MAKANAN BARU (WET vs DRY) ---
+	if food_name in ["Bacon", "Golden Burger", "Burger"]:
+		Sfx.play("eat_dry")
+	elif food_name in ["Grape", "Pizza Slice", "Banana", "Frozen Apple"]:
+		Sfx.play("eat_wet")
+	# ---------------------------------------
+	
 	if food_name == "Banana": 
 		player_hp = min(player_hp + 20, main_ref.max_hp)
 		update_hud()
@@ -2369,6 +2469,11 @@ func try_attack(mouse_world_pos, is_charged):
 		if chainsaw_use_timer >= 10.0:
 			chainsaw_exhausted_timer = 4.0
 			chainsaw_use_timer = 0.0
+			show_floating_text("CHAINSAW EXHAUSTED!", clone_player.global_position + Vector2(0, -60), Color.RED)
+			
+			# --- SFX MACHINE EXHAUSTED ---
+			Sfx.play("machine_exhausted")
+			# -----------------------------
 	
 	# --- SILVER GRAY SWORD: Accelerate speed bonus ---
 	if held_item == "Silver Gray Sword" and sgs_accelerate_stacks > 0:
@@ -3326,6 +3431,10 @@ func update_minions(delta):
 				else:
 					enemy.set_meta("poison_rem", _pr)
 				if _ph <= 0:
+					# --- BARU: Suara kematian ---
+					var _ename = enemy.get_meta("type").to_lower().replace("_boss", "")
+					Sfx.play(_ename + "_die")
+					# ---------------------------
 					if "boss" in enemy.get_meta("type"):
 						show_floating_text("BOSS DEFEATED!", enemy.global_position + Vector2(0, -60), Color.GOLD)
 						if is_instance_valid(boss_ui): boss_ui.visible = false
@@ -3355,6 +3464,10 @@ func update_minions(delta):
 				else:
 					enemy.set_meta("bleed_rem", _br)
 				if _bh <= 0:
+					# --- BARU: Suara kematian ---
+					var _ename = enemy.get_meta("type").to_lower().replace("_boss", "")
+					Sfx.play(_ename + "_die")
+					# --------------------------
 					if "boss" in enemy.get_meta("type"):
 						show_floating_text("BOSS DEFEATED!", enemy.global_position + Vector2(0, -60), Color.GOLD)
 						if is_instance_valid(boss_ui): boss_ui.visible = false
@@ -4303,6 +4416,9 @@ func take_damage(amount):
 	if galahad_parry_active:
 		galahad_parry_active = false
 		damage_cooldown = 0.7
+		# --- SUARA PARRY SLASH BERHASIL ---
+		Sfx.play("parry_slash")
+		# ----------------------------------
 		show_floating_text("PARRIED!", clone_player.global_position + Vector2(0, -40), Color.GOLD)
 		
 		var _weapon = Global.hotbar_items[main_ref.selected_hotbar_index]
@@ -4555,6 +4671,10 @@ func open_boss_chest():
 	if boss_chest == null or not is_instance_valid(boss_chest): 
 		return
 	
+	# --- SUARA CHEST TERBUKA (BARU) ---
+	Sfx.play("chest_open")
+	# ----------------------------------
+	
 	var chest_pos = boss_chest.global_position
 	
 	# --- 1. GUARANTEE LOOT (Scaling per Difficulty) ---
@@ -4687,7 +4807,13 @@ func open_boss_chest():
 	for i in range(loot_texts.size()):
 		var offset = Vector2(randi_range(-20, 20), -40 - (i * 10))
 		show_floating_text(loot_texts[i]["text"], chest_pos + offset, loot_texts[i]["color"])
-		await get_tree().create_timer(0.2).timeout
+		
+		# --- SUARA LOOT DROP (BARU) ---
+		# Dimainkan sekali saat isi chest mulai terungkap
+		Sfx.play("loot_drop")
+		# ------------------------------
+		
+		await get_tree().create_timer(0.4).timeout
 		
 	show_floating_text("Go to the left door to leave!", clone_player.global_position + Vector2(0, -100), Color.CYAN)
 	
@@ -4852,3 +4978,8 @@ func _play_domain_bgm(start_time: float = 0.0):
 	
 	if bgm_path != "":
 		MusicManager.play_bgm(bgm_path, start_time)
+
+func _exit_tree():
+	if is_instance_valid(chainsaw_player): chainsaw_player.stop()
+	if is_instance_valid(drill_player): drill_player.stop()
+	if is_instance_valid(laser_player): laser_player.stop()

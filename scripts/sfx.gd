@@ -85,6 +85,18 @@ func _ready():
 		_sounds["boulder_impact"] = load("res://audio/sfx_boulder_impact.mp3")
 	# ------------------------------------
 	
+	# --- SUARA MAKANAN BARU ---
+	if ResourceLoader.exists("res://audio/sfx_eat_wet.mp3"):   # Contoh: Grape, Burger, Potion
+		_sounds["eat_wet"] = load("res://audio/sfx_eat_wet.mp3")
+	if ResourceLoader.exists("res://audio/sfx_eat_dry.mp3"):   # Contoh: Banana, Bacon, Bread
+		_sounds["eat_dry"] = load("res://audio/sfx_eat_dry.mp3")
+	
+	# --- SUARA CHEST & LOOT BARU ---
+	if ResourceLoader.exists("res://audio/sfx_chest_open.mp3"): # Suara engsel peti kayu/logam
+		_sounds["chest_open"] = load("res://audio/sfx_chest_open.mp3")
+	if ResourceLoader.exists("res://audio/sfx_loot_drop.mp3"):  # Suara "pop" atau "shimmer" saat item muncul
+		_sounds["loot_drop"] = load("res://audio/sfx_loot_drop.mp3")
+	
 	# --- SUARA PEMAIN ---
 	if ResourceLoader.exists("res://audio/sfx_player_hurt.mp3"):
 		_sounds["player_hurt"] = load("res://audio/sfx_player_hurt.mp3")
@@ -92,13 +104,56 @@ func _ready():
 		_sounds["player_die"] = load("res://audio/sfx_player_die.mp3")
 	# --------------------
 	
+	# --- SUARA SENJATA MELEE & TOOL (9 SFX) ---
+	if ResourceLoader.exists("res://audio/sfx_melee_slash_light.mp3"):
+		_sounds["melee_slash_light"] = load("res://audio/sfx_melee_slash_light.mp3")
+	if ResourceLoader.exists("res://audio/sfx_melee_slash_standard.mp3"):
+		_sounds["melee_slash_standard"] = load("res://audio/sfx_melee_slash_standard.mp3")
+	if ResourceLoader.exists("res://audio/sfx_magic_sword.mp3"):
+		_sounds["magic_sword"] = load("res://audio/sfx_magic_sword.mp3")
+	if ResourceLoader.exists("res://audio/sfx_chainsaw_idle.ogg"):
+		_sounds["chainsaw_idle"] = load("res://audio/sfx_chainsaw_idle.ogg")
+	if ResourceLoader.exists("res://audio/sfx_heavy_sword.mp3"):
+		_sounds["heavy_sword"] = load("res://audio/sfx_heavy_sword.mp3")
+	if ResourceLoader.exists("res://audio/sfx_hammer_swing.mp3"):
+		_sounds["hammer_swing"] = load("res://audio/sfx_hammer_swing.mp3")
+	if ResourceLoader.exists("res://audio/sfx_laser_cast.mp3"):
+		_sounds["laser_cast"] = load("res://audio/sfx_laser_cast.mp3")
+	if ResourceLoader.exists("res://audio/sfx_drill_idle.mp3"):
+		_sounds["drill_idle"] = load("res://audio/sfx_drill_idle.mp3")
+	if ResourceLoader.exists("res://audio/sfx_machine_exhausted.mp3"):
+		_sounds["machine_exhausted"] = load("res://audio/sfx_machine_exhausted.mp3")
+	# -------------------------------------------
+	
+	# --- SUARA PARRY GALAHAD ---
+	if ResourceLoader.exists("res://audio/sfx_parry_activate.mp3"):
+		_sounds["parry_activate"] = load("res://audio/sfx_parry_activate.mp3")
+	if ResourceLoader.exists("res://audio/sfx_parry_slash.mp3"):
+		_sounds["parry_slash"] = load("res://audio/sfx_parry_slash.mp3")
+	# --------------------------------
+	
+	# --- SUARA SKILL SENJATA CHARGE ---
+	if ResourceLoader.exists("res://audio/sfx_hammer_charge.mp3"):
+		_sounds["hammer_charge"] = load("res://audio/sfx_hammer_charge.mp3")
+	if ResourceLoader.exists("res://audio/sfx_heavy_slam.mp3"):
+		_sounds["heavy_slam"] = load("res://audio/sfx_heavy_slam.mp3")
+	if ResourceLoader.exists("res://audio/sfx_conductor_charge.mp3"):
+		_sounds["conductor_charge"] = load("res://audio/sfx_conductor_charge.mp3")
+	if ResourceLoader.exists("res://audio/sfx_conductor_electric.mp3"):
+		_sounds["conductor_electric"] = load("res://audio/sfx_conductor_electric.mp3")
+	if ResourceLoader.exists("res://audio/sfx_stormjade_charge.mp3"):
+		_sounds["stormjade_charge"] = load("res://audio/sfx_stormjade_charge.mp3")
+	if ResourceLoader.exists("res://audio/sfx_stormjade_dash.mp3"):
+		_sounds["stormjade_dash"] = load("res://audio/sfx_stormjade_dash.mp3")
+	# ----------------------------------
+	
 	for i in 8:
 		var p := AudioStreamPlayer.new()
 		p.bus = "Master"
 		add_child(p)
 		_players.append(p)
 
-func play(sound_name: String) -> void:
+func play(sound_name: String, custom_volume: float = 0.0) -> void:
 	var stream: AudioStream = _sounds.get(sound_name)
 	if stream == null:
 		return
@@ -108,15 +163,23 @@ func play(sound_name: String) -> void:
 	if sound_name.ends_with("_hurt") or sound_name.ends_with("_die"):
 		pitch_variance = 0.15  # Variasi 15% untuk suara monster
 	# -----------------------------------------------
+	
+	# --- KHUSUS CANNIBAL: KECILKAN VOLUME OTOMATIS ---
+	var final_volume = custom_volume
+	if sound_name == "cannibal_hurt" or sound_name == "cannibal_die":
+		final_volume = -15.0  # Kecilkan volume Cannibal (angka lebih minus = lebih pelan)
+	# --------------------------------------------------
 		
 	for p in _players:
 		if not p.playing:
 			p.stream = stream
+			p.volume_db = final_volume  # <-- TERAPKAN VOLUME DI SINI
 			p.pitch_scale = randf_range(1.0 - pitch_variance, 1.0 + pitch_variance)
 			p.play()
 			return
 			
 	_players[0].stream = stream
+	_players[0].volume_db = final_volume  # <-- TERAPKAN VOLUME DI SINI
 	_players[0].pitch_scale = randf_range(1.0 - pitch_variance, 1.0 + pitch_variance)
 	_players[0].play()
 
