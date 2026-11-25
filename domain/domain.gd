@@ -332,6 +332,11 @@ func _process(delta):
 				var _mana_cost = _item_stats.get("mana_cost", 25)
 				if player_mana >= _mana_cost:
 					player_mana -= _mana_cost
+					
+					# --- TAMBAHKAN SFX DI SINI ---
+					Sfx.play("heal_cast")
+					# ---------------------------
+					
 					var _heal = _item_stats.get("heal_amount", 12)
 					var _lv = Global.get_item_level("Radiance Scepter")
 					if _lv > 1:
@@ -368,6 +373,18 @@ func _process(delta):
 				
 			# 2. Logika Serang (Sword, Bow, dll)
 			elif w_type != "":
+				# --- SFX BASIC SHOT RANGE ---
+				if _held_check == "Crystal Minigun":
+					Sfx.play("minigun_shot")
+				elif _held_check == "Heretic Staff":
+					Sfx.play("magic_beam")
+				elif _held_check == "Radiance Scepter":
+					# (SFX heal dipanggil di blok Radiance Scepter khusus jika mana cukup)
+					pass 
+				else:
+					# Semua Bow (Basic shot tanpa charge)
+					Sfx.play("arrow_basic")
+				# ----------------------------
 				# Tebasan Ringan
 				if _held_check in ["Wooden Sword", "Menacing Dagger", "Revenger Crystallinum"]:
 					Sfx.play("melee_slash_light")
@@ -2026,6 +2043,17 @@ func _input(event: InputEvent) -> void:
 				elif held in ["Bow", "Iron Bow", "Hunter Bow", "Mourning Bow", "Marble Slingshot", "Explosive Crossbow", "Ricochet Bow", "Bounty Bow", "Sticky Crossbow", "Headhitter Heavy Bow"]:
 					is_charging_bow = true
 					show_floating_text("Charging...", clone_player.global_position, Color.CYAN)
+					
+					# --- SFX CHARGE MULAI ---
+					if held == "Headhitter Heavy Bow":
+						Sfx.play("bow_charge_heavy")
+					elif held == "Marble Slingshot":
+						Sfx.play("slingshot_charge")
+					elif held == "Sticky Crossbow":
+						Sfx.play("rubber_stretch")
+					else:
+						Sfx.play("bow_charge_std")
+					# ------------------------
 				elif held == "Crystal Hammer":
 					hammer_charging = true
 					hammer_charge_timer = 0.0
@@ -2052,6 +2080,18 @@ func _input(event: InputEvent) -> void:
 			var held = Global.hotbar_items[main_ref.selected_hotbar_index]
 			if held in ["Bow", "Iron Bow", "Hunter Bow", "Mourning Bow", "Marble Slingshot", "Explosive Crossbow", "Ricochet Bow", "Bounty Bow", "Sticky Crossbow", "Headhitter Heavy Bow"] and is_charging_bow:
 				is_charging_bow = false
+				
+				# --- SFX CHARGE RELEASE ---
+				if held == "Explosive Crossbow":
+					Sfx.play("firecracker_launch")
+				elif held == "Headhitter Heavy Bow":
+					Sfx.play("ballista_release")
+				elif held == "Marble Slingshot":
+					Sfx.play("slingshot_flick")
+				else:
+					Sfx.play("arrow_release_std")
+				# --------------------------
+				
 				if attack_cooldown <= 0:
 					try_attack(get_global_mouse_position(), true)
 			
@@ -2277,6 +2317,9 @@ func try_attack(mouse_world_pos, is_charged):
 			attack_cooldown = 0.5
 			return true
 		player_mana -= _mana_cost
+		# --- TAMBAHKAN SFX HEAL DI SINI ---
+		Sfx.play("heal_cast")
+		# ----------------------------------
 				
 		var _heal = item_stats.get("heal_amount", 12)
 		var _lv = Global.get_item_level("Radiance Scepter")
@@ -2349,12 +2392,11 @@ func try_attack(mouse_world_pos, is_charged):
 			# 70% terrify
 			if randf() < 0.7:
 				_hs_target.set_meta("terrified_timer", 1.5)
-				show_floating_text("TERRIFIED!", _hs_target.global_position + Vector2(0, -40), Color.PURPLE)
-			
-		# Death handling (boss & non-boss)
-			# 70% terrify
-			if randf() < 0.7:
-				_hs_target.set_meta("terrified_timer", 1.5)
+				
+				# --- TAMBAHKAN SFX TERRIFY DI SINI ---
+				Sfx.play("terrify_cast")
+				# -------------------------------------
+				
 				show_floating_text("TERRIFIED!", _hs_target.global_position + Vector2(0, -40), Color.PURPLE)
 			
 			# Death handling (boss & non-boss) — DI DALAM null check
@@ -2380,6 +2422,10 @@ func try_attack(mouse_world_pos, is_charged):
 			attack_cooldown = 0.5
 			return true
 		
+		# --- TAMBAHKAN SFX TEMBAKAN DASAR DI SINI ---
+		Sfx.play("minigun_shot")
+		# --------------------------------------------
+		
 		inventory["Minigun Ammo"] -= 1
 		if inventory["Minigun Ammo"] <= 0:
 			inventory.erase("Minigun Ammo")
@@ -2398,6 +2444,10 @@ func try_attack(mouse_world_pos, is_charged):
 		minigun_shot_count += 1
 		if minigun_shot_count >= 10:
 			minigun_shot_count = 0
+				# --- TAMBAHKAN SFX BOULDER DI SINI (REUSE ASSET) ---
+			# Ganti "crystal_golem_boulder_throw" dengan nama fungsi SFX boss kamu yang sebenarnya
+			Sfx.play("crystal_golem_boulder_throw") 
+			# ---------------------------------------------------
 			spawn_minigun_boulder(clone_player.global_position, get_global_mouse_position(), int(_mg_dmg * 1.3))
 		
 		for _e in enemies.duplicate():
@@ -2842,170 +2892,179 @@ func update_arrows(delta):
 					if e in _hit_list and arrow.get_meta("weapon", "") != "Ricochet Bow":
 						continue
 						
-					# --- BOUNTY BOW EFFECT ---
-					if arrow.get_meta("weapon", "") == "Bounty Bow":
-						e.set_meta("is_bountied", true)
-						show_floating_text("BOUNTY!", e.global_position + Vector2(0, -70), Color.YELLOW)
-					
-					# --- MARBLE SLINGSHOT: inline damage + SOAK + deflect shield ---
-					if arrow.get_meta("weapon", "") == "Marble Slingshot":
-						# Deflect cave_slime_boss shield (projectile mantul)
-						if e.get_meta("type") == "cave_slime_boss" and e.get_meta("armor_hp", 0) > 0:
-							var _sh_dmg = max(1, int(arrow.get_meta("damage") * 0.1))
-							e.set_meta("armor_hp", e.get_meta("armor_hp") - _sh_dmg)
-							if is_instance_valid(boss_armor_bar):
-								boss_armor_bar.size.x = 400.0 * (float(max(e.get_meta("armor_hp"), 0)) / boss_max_armor)
-							show_floating_text(str(_sh_dmg) + " (Shield)", e.global_position + Vector2(0, -20), Color.YELLOW)
-							arrow.set_meta("is_enemy_proj", true)
-							arrow.set_meta("is_deflected", true)
-							var reflect_dir = sign(clone_player.global_position.x - e.global_position.x)
-							if reflect_dir == 0: reflect_dir = 1
-							arrow.set_meta("velocity", Vector2(reflect_dir * 400.0, -500.0))
-							arrow.set_meta("life_timer", 3.0)
-							arrow.size = Vector2(24, 8)
-							arrow.color = Color(1.0, 0.2, 0.2)
-							arrow.z_index = 20
-							show_floating_text("DEFLECTED!", e.global_position + Vector2(0, -50), Color.CYAN)
-							hit_enemy = false
-							break
-						
-						# Damage normal + armor soak cave_slime biasa
-						var _dmg_left = arrow.get_meta("damage")
-						if e.get_meta("type") == "cave_slime" and e.get_meta("armor_hp", 0) > 0:
-							var _armor = e.get_meta("armor_hp")
-							var _absorb = min(_dmg_left, _armor)
-							e.set_meta("armor_hp", _armor - _absorb)
-							_dmg_left -= _absorb
-							show_floating_text(str(_absorb) + " (Armor)", e.global_position + Vector2(0, -20), Color.YELLOW)
-						if _dmg_left > 0:
-							var _hp = e.get_meta("hp") - _dmg_left
-							e.set_meta("hp", _hp)
-							var _bar = e.get_meta("hp_bar", null)
-							if _bar: _bar.size.x = 30.0 * (float(max(_hp, 0)) / e.get_meta("max_hp"))
-							if "boss" in e.get_meta("type") and is_instance_valid(boss_bar):
-								boss_bar.size.x = 400.0 * (float(max(_hp, 0)) / boss_max_hp)
-							show_floating_text(str(_dmg_left), e.global_position + Vector2(randf_range(-20, 20), -30 - randf_range(0, 15)), Color.CYAN)
-							if _hp <= 0:
-								var _ct = e.get_meta("type")
-								if "boss" in _ct:
-									show_floating_text("BOSS DEFEATED!", e.global_position + Vector2(0, -60), Color.GOLD)
-									if is_instance_valid(boss_ui): boss_ui.visible = false
-									is_boss_defeated = true
-									spawn_boss_chest()
-								enemies.erase(e)
-								if is_instance_valid(e):
-									e.queue_free()
-						
-						# SOAK: pellet destroy
-						hit_enemy = true
-						break
-					# -----------------------------------------------
-						
-					# --- LOGIKA DEFLECT CAVE SLIME ---
+				# --- BOUNTY BOW EFFECT ---
+				if arrow.get_meta("weapon", "") == "Bounty Bow":
+					e.set_meta("is_bountied", true)
+					Sfx.play("scope_lock")
+					show_floating_text("BOUNTY!", e.global_position + Vector2(0, -70), Color.YELLOW)
+				
+				# --- MARBLE SLINGSHOT: inline damage + SOAK + deflect shield ---
+				if arrow.get_meta("weapon", "") == "Marble Slingshot":
+					# Deflect cave_slime_boss shield (projectile mantul)
 					if e.get_meta("type") == "cave_slime_boss" and e.get_meta("armor_hp", 0) > 0:
-						damage_enemy(e, int(arrow.get_meta("damage") * 0.1), false) # 90% DR
-						# Guard: kalau shield break dan boss mati, break loop
-						if not is_instance_valid(e) or e.is_queued_for_deletion():
-							hit_enemy = false
-							break
-						
-						# Pantulkan panah (Gaya Parabola)
+						var _sh_dmg = max(1, int(arrow.get_meta("damage") * 0.1))
+						e.set_meta("armor_hp", e.get_meta("armor_hp") - _sh_dmg)
+						if is_instance_valid(boss_armor_bar):
+							boss_armor_bar.size.x = 400.0 * (float(max(e.get_meta("armor_hp"), 0)) / boss_max_armor)
+						show_floating_text(str(_sh_dmg) + " (Shield)", e.global_position + Vector2(0, -20), Color.YELLOW)
 						arrow.set_meta("is_enemy_proj", true)
-						arrow.set_meta("is_deflected", true) # Penanda panah mantul
-						
-						# Arah pantulan: Ke arah player (X) dan mental ke atas (Y)
+						arrow.set_meta("is_deflected", true)
 						var reflect_dir = sign(clone_player.global_position.x - e.global_position.x)
 						if reflect_dir == 0: reflect_dir = 1
 						arrow.set_meta("velocity", Vector2(reflect_dir * 400.0, -500.0))
-						
-						arrow.set_meta("life_timer", 3.0) # Bertahan 3 detik
-						
-						# --- BIAR PANAH PANTUL LEBIH KELIHATAN ---
+						arrow.set_meta("life_timer", 3.0)
 						arrow.size = Vector2(24, 8)
-						arrow.color = Color(1.0, 0.2, 0.2) # Warna Merah Terang
-						arrow.z_index = 20 
-						# ------------------------------------------
-						
+						arrow.color = Color(1.0, 0.2, 0.2)
+						arrow.z_index = 20
 						show_floating_text("DEFLECTED!", e.global_position + Vector2(0, -50), Color.CYAN)
-						
-						hit_enemy = false # Jangan hancurkan panah
-						break
-					# ----------------------------------
-					
-					# --- HEADHITTER HEAVY BOW: EXECUTION ---
-					var _hh_arrow_dmg = arrow.get_meta("damage")
-					if arrow.get_meta("weapon", "") == "Headhitter Heavy Bow":
-						if e.get_meta("hp") < (e.get_meta("max_hp") * 0.3):
-							_hh_arrow_dmg = int(_hh_arrow_dmg * 1.5)
-							show_floating_text("EXECUTE!", e.global_position + Vector2(0, -60), Color.RED)
-							
-					# --- MOURNING BOW: stun on hit ---
-					if arrow.has_meta("stun_duration") and arrow.get_meta("stun_duration") > 0.0:
-						e.set_meta("terrified_timer", arrow.get_meta("stun_duration"))
-						show_floating_text("STUNNED!", e.global_position + Vector2(0, -60), Color.CYAN)
-					
-					# --- EXPLOSIVE CROSSBOW: skip single-target damage, AoE handled below ---
-					if arrow.get_meta("weapon", "") == "Explosive Crossbow" and arrow.get_meta("is_charged", false):
-						hit_enemy = true
-						break
-					
-					# --- RICOCHET BOW LOGIC ---
-					var _is_ricochet = false
-					if arrow.get_meta("weapon", "") == "Ricochet Bow" and arrow.get_meta("is_charged", false):
-						var _bounces = arrow.get_meta("bounce_count", 0)
-						if _bounces < 4 and randf() < 0.20:
-							var _nearest = null
-							var _min_dist = 128.0  # Range mantul maksimal 8 block
-							for _other in enemies:
-								if not is_instance_valid(_other) or _other.is_queued_for_deletion(): continue
-								if _other in _hit_list: continue  # Jangan mantul ke musuh yang sudah kena
-								var _d = arrow.position.distance_to(_other.global_position)
-								if _d < _min_dist and _d > 10.0:
-									_min_dist = _d
-									_nearest = _other
-							if _nearest != null:
-								arrow.set_meta("bounce_count", _bounces + 1)
-								var _dir = (_nearest.global_position - arrow.position).normalized()
-								arrow.set_meta("velocity", _dir * 600.0)
-								arrow.set_meta("life_timer", 1.5)
-								arrow.rotation = _dir.angle()
-								show_floating_text("RICOCHET!", arrow.position, Color.YELLOW)
-								_is_ricochet = true
-								# Tandai musuh saat ini sudah kena
-								_hit_list.append(e)
-								arrow.set_meta("hit_enemies", _hit_list)
-
-
-					# Panggil damage_enemy (ini otomatis menghitung kematian, exp, dan loot)
-					damage_enemy(e, _hh_arrow_dmg, false)
-					
-					# --- HEADHITTER KNOCKBACK ---
-					if arrow.get_meta("weapon", "") == "Headhitter Heavy Bow" and arrow.get_meta("is_charged", false):
-						if is_instance_valid(e) and not e.is_queued_for_deletion():
-							var _hb_dir = sign(e.global_position.x - clone_player.global_position.x)
-							if _hb_dir == 0: _hb_dir = 1
-							_safe_knockback(e, _hb_dir, 64)
-							if e.has_meta("knockback_timer"):
-								e.set_meta("knockback_timer", 1.0)
-					
-					# --- BOUNTY BOW KILL LOGIC ---
-					if arrow.get_meta("weapon", "") == "Bounty Bow":
-						if not is_instance_valid(e) or e.get_meta("hp", 0) <= 0:
-							bounty_bow_stacks = min(bounty_bow_stacks + 1, 5)
-							bounty_stack_timer = 7.0
-							show_floating_text("Bounty Stack: " + str(bounty_bow_stacks) + "/5", clone_player.global_position + Vector2(0, -60), Color.GOLD)
-					# ------------------------------
-					
-					if _is_ricochet:
 						hit_enemy = false
-						break # Panah tidak hancur, lanjut ke musuh berikutnya
-					else:
-						hit_enemy = true
 						break
-			if hit_enemy:
-				# --- EXPLOSIVE CROSSBOW AoE on enemy hit ---
-				if arrow.get_meta("weapon", "") == "Explosive Crossbow" and arrow.get_meta("is_charged", false):
+					
+					# Damage normal + armor soak cave_slime biasa
+					var _dmg_left = arrow.get_meta("damage")
+					if e.get_meta("type") == "cave_slime" and e.get_meta("armor_hp", 0) > 0:
+						var _armor = e.get_meta("armor_hp")
+						var _absorb = min(_dmg_left, _armor)
+						e.set_meta("armor_hp", _armor - _absorb)
+						_dmg_left -= _absorb
+						show_floating_text(str(_absorb) + " (Armor)", e.global_position + Vector2(0, -20), Color.YELLOW)
+					if _dmg_left > 0:
+						var _hp = e.get_meta("hp") - _dmg_left
+						e.set_meta("hp", _hp)
+						var _bar = e.get_meta("hp_bar", null)
+						if _bar: _bar.size.x = 30.0 * (float(max(_hp, 0)) / e.get_meta("max_hp"))
+						if "boss" in e.get_meta("type") and is_instance_valid(boss_bar):
+							boss_bar.size.x = 400.0 * (float(max(_hp, 0)) / boss_max_hp)
+						show_floating_text(str(_dmg_left), e.global_position + Vector2(randf_range(-20, 20), -30 - randf_range(0, 15)), Color.CYAN)
+						if _hp <= 0:
+							var _ct = e.get_meta("type")
+							if "boss" in _ct:
+								show_floating_text("BOSS DEFEATED!", e.global_position + Vector2(0, -60), Color.GOLD)
+								if is_instance_valid(boss_ui): boss_ui.visible = false
+								is_boss_defeated = true
+								spawn_boss_chest()
+							enemies.erase(e)
+							if is_instance_valid(e):
+								e.queue_free()
+					
+					# SOAK: pellet destroy
+					hit_enemy = true
+					break
+				# -----------------------------------------------
+					
+				# --- LOGIKA DEFLECT CAVE SLIME ---
+				if e.get_meta("type") == "cave_slime_boss" and e.get_meta("armor_hp", 0) > 0:
+					damage_enemy(e, int(arrow.get_meta("damage") * 0.1), false) # 90% DR
+					# Guard: kalau shield break dan boss mati, break loop
+					if not is_instance_valid(e) or e.is_queued_for_deletion():
+						hit_enemy = false
+						break
+					
+					# Pantulkan panah (Gaya Parabola)
+					arrow.set_meta("is_enemy_proj", true)
+					arrow.set_meta("is_deflected", true) # Penanda panah mantul
+					
+					# Arah pantulan: Ke arah player (X) dan mental ke atas (Y)
+					var reflect_dir = sign(clone_player.global_position.x - e.global_position.x)
+					if reflect_dir == 0: reflect_dir = 1
+					arrow.set_meta("velocity", Vector2(reflect_dir * 400.0, -500.0))
+					
+					arrow.set_meta("life_timer", 3.0) # Bertahan 3 detik
+					
+					# --- BIAR PANAH PANTUL LEBIH KELIHATAN ---
+					arrow.size = Vector2(24, 8)
+					arrow.color = Color(1.0, 0.2, 0.2) # Warna Merah Terang
+					arrow.z_index = 20 
+					# ------------------------------------------
+					
+					show_floating_text("DEFLECTED!", e.global_position + Vector2(0, -50), Color.CYAN)
+					
+					hit_enemy = false # Jangan hancurkan panah
+					break
+				# ----------------------------------
+				
+				# --- HEADHITTER HEAVY BOW: EXECUTION ---
+				var _hh_arrow_dmg = arrow.get_meta("damage")
+				if arrow.get_meta("weapon", "") == "Headhitter Heavy Bow":
+					if e.get_meta("hp") < (e.get_meta("max_hp") * 0.3):
+						_hh_arrow_dmg = int(_hh_arrow_dmg * 1.5)
+						show_floating_text("EXECUTE!", e.global_position + Vector2(0, -60), Color.RED)
+						
+				# --- MOURNING BOW: stun on hit ---
+				if arrow.has_meta("stun_duration") and arrow.get_meta("stun_duration") > 0.0:
+					e.set_meta("terrified_timer", arrow.get_meta("stun_duration"))
+					# --- TAMBAHKAN SFX WEB DI SINI (REUSE ASSET) ---
+					Sfx.play("web_hit") 
+					# -----------------------------------------------
+					show_floating_text("STUNNED!", e.global_position + Vector2(0, -60), Color.CYAN)
+				
+				# --- EXPLOSIVE CROSSBOW: LANGSUNG MELEDAK SAAT KENA MUSUH ---
+				if arrow.get_meta("weapon", "") == "Explosive Crossbow":
+					Sfx.play("explosion_med")
 					trigger_crossbow_explosion(arrow.position, arrow.get_meta("damage"))
+					hit_enemy = true
+					break
+				# -----------------------------------------------------------
+				
+				# --- RICOCHET BOW LOGIC ---
+				var _is_ricochet = false
+				if arrow.get_meta("weapon", "") == "Ricochet Bow" and arrow.get_meta("is_charged", false):
+					var _bounces = arrow.get_meta("bounce_count", 0)
+					if _bounces < 4 and randf() < 0.20:
+						var _nearest = null
+						var _min_dist = 128.0  # Range mantul maksimal 8 block
+						for _other in enemies:
+							if not is_instance_valid(_other) or _other.is_queued_for_deletion(): continue
+							if _other in _hit_list: continue  # Jangan mantul ke musuh yang sudah kena
+							var _d = arrow.position.distance_to(_other.global_position)
+							if _d < _min_dist and _d > 10.0:
+								_min_dist = _d
+								_nearest = _other
+						if _nearest != null:
+							arrow.set_meta("bounce_count", _bounces + 1)
+							var _dir = (_nearest.global_position - arrow.position).normalized()
+							arrow.set_meta("velocity", _dir * 600.0)
+							arrow.set_meta("life_timer", 1.5)
+							arrow.rotation = _dir.angle()
+							show_floating_text("RICOCHET!", arrow.position, Color.YELLOW)
+							_is_ricochet = true
+							# Tandai musuh saat ini sudah kena
+							_hit_list.append(e)
+							arrow.set_meta("hit_enemies", _hit_list)
+
+				# --- IRON BOW PIERCE SOUND ---
+				if arrow.get_meta("weapon", "") == "Iron Bow":
+					Sfx.play("pierce_ding")
+				# -----------------------------
+
+				# Panggil damage_enemy (ini otomatis menghitung kematian, exp, dan loot)
+				damage_enemy(e, _hh_arrow_dmg, false)
+				
+				# --- HEADHITTER KNOCKBACK ---
+				if arrow.get_meta("weapon", "") == "Headhitter Heavy Bow" and arrow.get_meta("is_charged", false):
+					if is_instance_valid(e) and not e.is_queued_for_deletion():
+						var _hb_dir = sign(e.global_position.x - clone_player.global_position.x)
+						if _hb_dir == 0: _hb_dir = 1
+						_safe_knockback(e, _hb_dir, 64)
+						if e.has_meta("knockback_timer"):
+							e.set_meta("knockback_timer", 1.0)
+				
+				# --- BOUNTY BOW KILL LOGIC ---
+				if arrow.get_meta("weapon", "") == "Bounty Bow":
+					if not is_instance_valid(e) or e.get_meta("hp", 0) <= 0:
+						bounty_bow_stacks = min(bounty_bow_stacks + 1, 5)
+						bounty_stack_timer = 7.0
+						show_floating_text("Bounty Stack: " + str(bounty_bow_stacks) + "/5", clone_player.global_position + Vector2(0, -60), Color.GOLD)
+				# ------------------------------
+				
+				if _is_ricochet:
+					hit_enemy = false
+					break # Panah tidak hancur, lanjut ke musuh berikutnya
+				else:
+					hit_enemy = true
+					break
+			if hit_enemy:
+				# Explosive Crossbow sudah meledak di dalam loop musuh di atas
 				arrow.queue_free()
 				arrows.remove_at(i)
 				continue
@@ -3019,6 +3078,13 @@ func update_arrows(delta):
 			var query = PhysicsPointQueryParameters2D.new()
 			query.position = arrow.position
 			query.collide_with_bodies = true
+			
+			# --- FIX KRUSIAL: Abaikan collision player sendiri ---
+			# Tanpa ini, panah akan mendeteksi badan player saat baru spawn dan langsung meledak "di tempat"!
+			if is_instance_valid(clone_player):
+				query.exclude = [clone_player.get_rid()]
+			# ----------------------------------------------------
+			
 			var result = space_state.intersect_point(query)
 			
 			for r in result:
@@ -3074,7 +3140,10 @@ func update_arrows(delta):
 		
 		if hit_wall or life_timer <= 0:
 			# --- EXPLOSIVE CROSSBOW AoE on wall / lifetime ---
-			if arrow.get_meta("weapon", "") == "Explosive Crossbow" and arrow.get_meta("is_charged", false):
+			if arrow.get_meta("weapon", "") == "Explosive Crossbow":
+				# --- TAMBAHKAN SFX LEDAKAN DI SINI ---
+				Sfx.play("explosion_med")
+				# -------------------------------------
 				trigger_crossbow_explosion(arrow.position, arrow.get_meta("damage"))
 			arrow.queue_free()
 			arrows.remove_at(i)

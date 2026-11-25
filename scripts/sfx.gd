@@ -147,6 +147,32 @@ func _ready():
 		_sounds["stormjade_dash"] = load("res://audio/sfx_stormjade_dash.mp3")
 	# ----------------------------------
 	
+		# --- SFX RANGE WEAPON (CHARGE & RELEASE) ---
+	if ResourceLoader.exists("res://audio/sfx_bow_charge_std.mp3"): _sounds["bow_charge_std"] = load("res://audio/sfx_bow_charge_std.mp3")
+	if ResourceLoader.exists("res://audio/sfx_bow_charge_heavy.mp3"): _sounds["bow_charge_heavy"] = load("res://audio/sfx_bow_charge_heavy.mp3")
+	if ResourceLoader.exists("res://audio/sfx_slingshot_charge.mp3"): _sounds["slingshot_charge"] = load("res://audio/sfx_slingshot_charge.mp3")
+	if ResourceLoader.exists("res://audio/sfx_rubber_stretch.mp3"): _sounds["rubber_stretch"] = load("res://audio/sfx_rubber_stretch.mp3")
+	
+	if ResourceLoader.exists("res://audio/sfx_arrow_release_std.mp3"): _sounds["arrow_release_std"] = load("res://audio/sfx_arrow_release_std.mp3")
+	if ResourceLoader.exists("res://audio/sfx_firecracker_launch.mp3"): _sounds["firecracker_launch"] = load("res://audio/sfx_firecracker_launch.mp3")
+	if ResourceLoader.exists("res://audio/sfx_ballista_release.mp3"): _sounds["ballista_release"] = load("res://audio/sfx_ballista_release.mp3")
+	if ResourceLoader.exists("res://audio/sfx_slingshot_flick.mp3"): _sounds["slingshot_flick"] = load("res://audio/sfx_slingshot_flick.mp3")
+	# -------------------------------------------
+
+	# --- SFX RANGE WEAPON (BASIC SHOT) ---
+	if ResourceLoader.exists("res://audio/sfx_arrow_basic.mp3"): _sounds["arrow_basic"] = load("res://audio/sfx_arrow_basic.mp3")
+	if ResourceLoader.exists("res://audio/sfx_minigun_shot.mp3"): _sounds["minigun_shot"] = load("res://audio/sfx_minigun_shot.mp3")
+	if ResourceLoader.exists("res://audio/sfx_magic_beam.mp3"): _sounds["magic_beam"] = load("res://audio/sfx_magic_beam.mp3")
+	if ResourceLoader.exists("res://audio/sfx_heal_cast.mp3"): _sounds["heal_cast"] = load("res://audio/sfx_heal_cast.mp3")
+	# -------------------------------------
+
+	# --- SFX RANGE WEAPON (SPECIAL/PASSIVE) ---
+	if ResourceLoader.exists("res://audio/sfx_pierce_ding.mp3"): _sounds["pierce_ding"] = load("res://audio/sfx_pierce_ding.mp3")
+	if ResourceLoader.exists("res://audio/sfx_scope_lock.mp3"): _sounds["scope_lock"] = load("res://audio/sfx_scope_lock.mp3")
+	if ResourceLoader.exists("res://audio/sfx_explosion_med.mp3"): _sounds["explosion_med"] = load("res://audio/sfx_explosion_med.mp3")
+	if ResourceLoader.exists("res://audio/sfx_terrify_cast.mp3"): _sounds["terrify_cast"] = load("res://audio/sfx_terrify_cast.mp3")
+	# ------------------------------------------
+	
 	for i in 8:
 		var p := AudioStreamPlayer.new()
 		p.bus = "Master"
